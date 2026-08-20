@@ -17,6 +17,8 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  # 支持手动触发(不依赖 push), 方便调试/重部署
+  workflow_dispatch:
 
 # 部署权限
 permissions:
@@ -55,8 +57,11 @@ jobs:
         run: npm run test
 
       # 生产构建(输出 dist/)
+      # Pages 子路径部署需要正确 base, 否则资源 404
       - name: Build
         run: npm run build
+        env:
+          VITE_BASE_URL: /ui-kit/
 
       # GitHub Pages 不支持 SPA history 回退 → 用 404.html 兜底
       # Pages 把 404.html 当作未知路径的回退页, Vue Router 的 JS 再接管路由
