@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="40" fill="#4f46e5"/>
+  <!-- UiKit 组件拼图: 三个 UI 组件块(按钮/卡片/输入框) -->
+  <!-- 顶部按钮 -->
+  <rect x="52" y="40" width="88" height="30" rx="15" fill="#ffffff"/>
+  <rect x="76" y="49" width="40" height="12" rx="6" fill="#4f46e5"/>
+  <!-- 中间卡片 -->
+  <rect x="40" y="82" width="112" height="56" rx="10" fill="#eef2ff" stroke="#ffffff" stroke-width="3"/>
+  <!-- 卡片内线条(表示内容骨架) -->
+  <rect x="54" y="98" width="64" height="7" rx="3.5" fill="#c7d2fe"/>
+  <rect x="54" y="114" width="42" height="7" rx="3.5" fill="#c7d2fe"/>
+  <!-- 底部输入框 -->
+  <rect x="48" y="152" width="96" height="22" rx="11" fill="#ffffff" opacity="0.9"/>
+  <circle cx="132" cy="163" r="6" fill="#4f46e5"/>
+  <!-- 爪印装饰(布鲁🐾) -->
+  <circle cx="60" cy="150" r="4" fill="#a5b4fc"/>
+  <circle cx="70" cy="144" r="3" fill="#a5b4fc"/>
+</svg>

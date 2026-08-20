@@ -1,0 +1,133 @@
+/* ============================================================
+   UiKit Design Tokens —— 语义化设计令牌
+   作品⑮：深色/浅色主题系统核心
+   ------------------------------------------------------------
+   学习重点:
+   1. CSS 自定义属性（变量）做"设计令牌"，组件只引用 token，不写死颜色
+   2. 同一组 token 在不同主题下给不同值 → 组件零改动自动换肤
+   3. 作用域: :root 默认浅色，[data-theme="dark"] 覆盖深色
+   4. 跟随系统: @media (prefers-color-scheme: dark)（仅当用户未手动指定）
+   ============================================================ */
+
+/* ---------- 基础调色板（品牌色，两主题通用） ---------- */
+:root {
+  /* 语义色（品牌强调色 —— 主色调，两主题一致） */
+  --ui-primary: #4f8cff;
+  --ui-primary-hover: #3d7bf0;
+  --ui-primary-soft: rgba(79, 140, 255, 0.14);
+  --ui-primary-border: rgba(79, 140, 255, 0.5);
+
+  /* 功能色 */
+  --ui-success: #22c55e;
+  --ui-warning: #f59e0b;
+  --ui-danger: #ef4444;
+  --ui-danger-hover: #dc2626;
+  --ui-danger-soft: rgba(239, 68, 68, 0.14);
+  --ui-info: #38bdf8;
+}
+
+/* ---------- 语义化表面/文本 token —— 浅色主题（默认） ---------- */
+:root {
+  /* 背景层级 */
+  --ui-bg: #f8fafc;              /* 页面背景 */
+  --ui-bg-soft: #f1f5f9;         /* 次级背景（输入框等凹陷面） */
+  --ui-panel: #ffffff;           /* 卡片/面板表面 */
+  --ui-panel-hover: #f8fafc;     /* 卡片 hover 表面 */
+
+  /* 边框 */
+  --ui-border: rgba(15, 23, 42, 0.1);
+  --ui-border-hover: rgba(15, 23, 42, 0.2);
+  --ui-divider: rgba(15, 23, 42, 0.08);
+
+  /* 文本层级 */
+  --ui-text-1: #0f172a;          /* 主文本（标题/正文） */
+  --ui-text-2: #475569;          /* 次级文本（描述） */
+  --ui-text-3: #94a3b8;          /* 弱化文本（占位/辅助） */
+
+  /* 悬停底色（如列表项 hover、按钮 hover 背景） */
+  --ui-hover: rgba(15, 23, 42, 0.05);
+
+  /* 遮罩/投影 */
+  --ui-overlay: rgba(15, 23, 42, 0.5);
+  --ui-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+  --ui-shadow-lg: 0 20px 60px rgba(15, 23, 42, 0.2);
+}
+
+/* ---------- 深色主题 ---------- */
+[data-theme='dark'] {
+  --ui-bg: #0f172a;
+  --ui-bg-soft: #0b1120;
+  --ui-panel: #1e293b;
+  --ui-panel-hover: #263449;
+
+  --ui-border: rgba(255, 255, 255, 0.1);
+  --ui-border-hover: rgba(255, 255, 255, 0.2);
+  --ui-divider: rgba(255, 255, 255, 0.06);
+
+  --ui-text-1: #e2e8f0;
+  --ui-text-2: #94a3b8;
+  --ui-text-3: #64748b;
+
+  --ui-hover: rgba(255, 255, 255, 0.06);
+
+  --ui-overlay: rgba(0, 0, 0, 0.55);
+  --ui-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --ui-shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- 跟随系统（仅当 html 无 data-theme 时生效） ---------- */
+/* useTheme 会在用户手动选择后给 <html> 设置 data-theme，
+   一旦设置了就不再看系统偏好。这里的媒体查询只是默认兜底。 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --ui-bg: #0f172a;
+    --ui-bg-soft: #0b1120;
+    --ui-panel: #1e293b;
+    --ui-panel-hover: #263449;
+
+    --ui-border: rgba(255, 255, 255, 0.1);
+    --ui-border-hover: rgba(255, 255, 255, 0.2);
+    --ui-divider: rgba(255, 255, 255, 0.06);
+
+    --ui-text-1: #e2e8f0;
+    --ui-text-2: #94a3b8;
+    --ui-text-3: #64748b;
+
+    --ui-hover: rgba(255, 255, 255, 0.06);
+
+    --ui-overlay: rgba(0, 0, 0, 0.55);
+    --ui-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    --ui-shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* ---------- 主题切换过渡（平滑换肤体验） ---------- */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease,
+    box-shadow 0.3s ease !important;
+}
+
+/* ---------- vTooltip 指令的悬浮提示气泡（作品㉑） ---------- */
+.ui-tooltip {
+  background: var(--ui-text-1);      /* 深色主题下自动反色 */
+  color: var(--ui-bg);               /* 文字用背景色, 保证对比度 */
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 5px 10px;
+  border-radius: 6px;
+  box-shadow: var(--ui-shadow);
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.95;
+  animation: ui-tooltip-in 0.15s ease;
+}
+
+@keyframes ui-tooltip-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 0.95; transform: translateY(0); }
+}

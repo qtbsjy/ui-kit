@@ -1,0 +1,57 @@
+{
+  "name": "ui-kit",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "run-p type-check \"build-only {@}\" --",
+    "preview": "vite preview",
+    "build-only": "vite build",
+    "type-check": "vue-tsc --build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build:lib": "vite build --config vite.lib.config.ts",
+    "prepublishOnly": "npm run build:lib"
+  },
+  "dependencies": {
+    "vue": "^3.3.0",
+    "vue-router": "^5.2.0",
+    "zod": "^3.22.0 || ^4.0.0"
+  },
+  "devDependencies": {
+    "@tsconfig/node24": "^24.0.4",
+    "@types/node": "^24.13.3",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "@vue/test-utils": "^2.4.11",
+    "@vue/tsconfig": "^0.9.1",
+    "jsdom": "^29.1.1",
+    "npm-run-all2": "^9.0.2",
+    "typescript": "~6.0.0",
+    "vite": "^8.1.5",
+    "vite-plugin-dts": "^5.0.3",
+    "vite-plugin-pwa": "^1.3.0",
+    "vite-plugin-vue-devtools": "^8.1.5",
+    "vitest": "^4.1.10",
+    "vue-tsc": "^3.3.7"
+  },
+  "description": "布鲁的自研 Vue3 + TS 通用 UI 组件库",
+  "main": "./dist/lib/ui-kit.umd.js",
+  "module": "./dist/lib/ui-kit.mjs",
+  "types": "./dist/lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/lib/index.d.ts",
+      "import": "./dist/lib/ui-kit.mjs",
+      "require": "./dist/lib/ui-kit.umd.js"
+    },
+    "./style.css": "./dist/lib/ui-kit.css"
+  },
+  "files": [
+    "dist/lib"
+  ],
+  "peerDependencies": {
+    "vue": "^3.3.0",
+    "zod": "^3.22.0 || ^4.0.0"
+  }
+}

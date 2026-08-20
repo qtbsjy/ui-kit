@@ -1,0 +1,82 @@
+# ============================================================
+# GitHub Actions CI/CD —— 自动部署到 GitHub Pages（作品㉕）
+# ------------------------------------------------------------
+# 触发: push 到 main 分支
+# 流程: checkout → node → install → type-check → test → build
+#       → 上传 Pages artifact → 部署 Pages
+# ------------------------------------------------------------
+# 学习重点:
+#   1. on.push.branches —— 只在 main 分支 push 时触发
+#   2. permissions —— Pages 部署需要 contents: read + pages: write + id-token: write
+#   3. actions/upload-pages-artifact —— 把 dist/ 打包成 Pages artifact
+#   4. actions/deploy-pages —— 部署 artifact 到 GitHub Pages
+#   5. concurrency —— 防止多次部署并发冲突(只保留最新一次)
+# ============================================================
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+# 部署权限
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 并发控制: 同一时间只跑一个部署, 新的会取消旧的
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  # ---------- 任务1: 构建 ----------
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # 类型检查(关键: 抓 TS 错误)
+      - name: Type check
+        run: npm run type-check
+
+      # 单元测试(test 脚本已是 vitest run)
+      - name: Run tests
+        run: npm run test
+
+      # 生产构建(输出 dist/)
+      - name: Build
+        run: npm run build
+
+      # GitHub Pages 不支持 SPA history 回退 → 用 404.html 兜底
+      # Pages 把 404.html 当作未知路径的回退页, Vue Router 的 JS 再接管路由
+      - name: Add SPA fallback (404.html)
+        run: cp dist/index.html dist/404.html
+
+      # 把 dist/ 打包成 Pages artifact
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  # ---------- 任务2: 部署(依赖 build 成功) ----------
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
