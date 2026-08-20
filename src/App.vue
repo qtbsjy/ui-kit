@@ -24,6 +24,7 @@ function onToggle() {
         <RouterLink to="/virtual">⚡ 虚拟列表</RouterLink>
         <RouterLink to="/async">⏳ 异步加载</RouterLink>
         <RouterLink to="/directives">🛠️ 指令集</RouterLink>
+        <RouterLink to="/table">📊 数据表格</RouterLink>
       </div>
       <button class="theme-toggle" :title="isDark ? '切到浅色' : '切到深色'" @click="onToggle">
         {{ isDark ? '☀️' : '🌙' }}

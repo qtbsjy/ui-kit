@@ -24,6 +24,7 @@ import UiVirtualList from './ui/UiVirtualList.vue'
 import UiConfigProvider from './ui/UiConfigProvider.vue'
 import UiSkeleton from './ui/UiSkeleton.vue'
 import UiInstallPwa from './ui/UiInstallPwa.vue'
+import UiTable from './ui/UiTable.vue'
 import { useFormValidator } from '../composables/useFormValidator'
 import { useTheme } from '../composables/useTheme'
 import { useUiConfig } from '../composables/useUiConfig'
@@ -51,6 +52,7 @@ export {
   UiConfigProvider,
   UiSkeleton,
   UiInstallPwa,
+  UiTable,
 }
 
 // 组合式函数导出：useFormValidator + useTheme + useUiConfig + useAsyncData + usePWA
@@ -73,6 +75,7 @@ const UiKit = {
     const components = {
       UiButton, UiBadge, UiCard, UiModal, UiProgress, UiToast, UiInput, UiTextarea, UiSelect, UiSwitch,
       UiGrid, UiGridItem, UiContainer, UiSpacer, UiVirtualList, UiConfigProvider, UiSkeleton, UiInstallPwa,
+      UiTable,
     }
     for (const [name, comp] of Object.entries(components)) {
       app.component(name, comp)

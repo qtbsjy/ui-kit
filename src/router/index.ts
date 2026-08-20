@@ -61,6 +61,11 @@ const router = createRouter({
       name: 'directives',
       component: () => import('../views/DirectivesView.vue'),
     },
+    {
+      path: '/table',
+      name: 'table',
+      component: () => import('../views/TableView.vue'),
+    },
   ],
 })
 

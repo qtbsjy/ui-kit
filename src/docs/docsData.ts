@@ -541,6 +541,61 @@ export const docs: ComponentDoc[] = [
     ],
   },
 
+  // ================= 数据 =================
+  {
+    id: 'table',
+    name: 'UiTable',
+    cn: '数据表格',
+    category: '数据',
+    tagline: '列配置驱动 + 排序 + 分页 + 作用域插槽',
+    desc: [
+      '企业级数据表格。列配置（columns）驱动渲染，一行配置即可出表，业务代码零模板重复。',
+      '排序：点击表头循环 asc→desc→none（不可变数据更新），支持数字/字符串(中文 locale)/日期比较，也可受控（sortKey/sortOrder + update 事件）。',
+      '分页：pageSize>0 时内置分页控件，computed 切片当前页数据，排序结果分页联动。',
+      '作用域插槽 #cell（row/column/index/value）优先于 formatter 自定义单元格；自带空态/加载态（含旋转动画）/斑马纹/紧凑模式。',
+    ],
+    learned: ['列配置驱动渲染（数据即视图）', '排序状态受控/非受控双模式（内部 ref vs props 受控）', 'computed 不可变排序 + 分页切片联动', '作用域插槽 + formatter 双通道自定义单元格', 'colspan 空态/加载态行'],
+    api: [
+      { kind: 'prop', name: 'columns', type: 'TableColumn[]', default: '-', desc: '列配置（key/label/width/align/sortable/formatter）' },
+      { kind: 'prop', name: 'data', type: 'any[]', default: '-', desc: '数据行' },
+      { kind: 'prop', name: 'pageSize', type: 'number', default: '10', desc: '分页大小；<=0 不分页' },
+      { kind: 'prop', name: 'loading', type: 'boolean', default: 'false', desc: '加载态（显示旋转动画）' },
+      { kind: 'prop', name: 'emptyText', type: 'string', default: '暂无数据', desc: '空态文案' },
+      { kind: 'prop', name: 'striped', type: 'boolean', default: 'false', desc: '斑马纹' },
+      { kind: 'prop', name: 'dense', type: 'boolean', default: 'false', desc: '紧凑模式' },
+      { kind: 'prop', name: 'sortKey / sortOrder', type: 'string / SortOrder', default: '-', desc: '受控排序状态（外部控制时传）' },
+      { kind: 'slot', name: 'cell', type: '{row,column,index,value}', default: '-', desc: '自定义单元格（优先于 formatter）' },
+      { kind: 'event', name: 'update:sortKey', type: '(key)', default: '-', desc: '排序字段变化' },
+      { kind: 'event', name: 'update:sortOrder', type: '(order)', default: '-', desc: '排序方向变化' },
+      { kind: 'event', name: 'update:currentPage', type: '(page)', default: '-', desc: '页码变化' },
+    ],
+    examples: [
+      {
+        title: '排序 + 分页',
+        desc: '列配置驱动，年龄列可排序，每页 3 条内置分页。',
+        code: `<UiTable
+  :columns="[
+    { key: 'name', label: '姓名', sortable: true },
+    { key: 'age', label: '年龄', sortable: true, align: 'right' },
+    { key: 'city', label: '城市' },
+  ]"
+  :data="rows" :page-size="3" />`,
+      },
+      {
+        title: '作用域插槽自定义单元格',
+        desc: '#cell 拿到 row/column/value，渲染任意内容（动画、徽标、按钮）。',
+        code: `<UiTable :columns="cols" :data="rows">
+  <template #cell="{ column, value }">
+    <UiBadge v-if="column.key === 'status'" :color="value ? 'green' : 'gray'">
+      {{ value ? '启用' : '停用' }}
+    </UiBadge>
+    <span v-else>{{ value }}</span>
+  </template>
+</UiTable>`,
+      },
+    ],
+  },
+
   // ================= 通用（进阶：provide/inject） =================
   {
     id: 'config-provider',
