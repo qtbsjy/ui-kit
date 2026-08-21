@@ -25,6 +25,7 @@ import UiConfigProvider from './ui/UiConfigProvider.vue'
 import UiSkeleton from './ui/UiSkeleton.vue'
 import UiInstallPwa from './ui/UiInstallPwa.vue'
 import UiTable from './ui/UiTable.vue'
+import type { TableColumn, SortOrder } from './ui/UiTable.vue'
 import { useFormValidator } from '../composables/useFormValidator'
 import { useTheme } from '../composables/useTheme'
 import { useUiConfig } from '../composables/useUiConfig'
@@ -54,6 +55,9 @@ export {
   UiInstallPwa,
   UiTable,
 }
+
+// 类型导出：让消费方 `import type { TableColumn, SortOrder } from 'ui-kit'`
+export type { TableColumn, SortOrder }
 
 // 组合式函数导出：useFormValidator + useTheme + useUiConfig + useAsyncData + usePWA
 export { useFormValidator }
