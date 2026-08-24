@@ -32,6 +32,30 @@ const cardTabs = [
   { label: '数据分析', value: 'analytics', disabled: true },
   { label: '报告', value: 'report' },
 ]
+
+// —— 可关闭标签（作品㉚ 进阶）——
+const closableTabs = ref([
+  { label: '首页', value: 'home' },
+  { label: '文档', value: 'docs' },
+  { label: '设置', value: 'settings', closable: false },
+])
+function closeTab(value: string | number) {
+  closableTabs.value = closableTabs.value.filter((t) => t.value !== value)
+}
+// 动态新增标签
+const addCounter = ref(1)
+const dynTabs = ref([
+  { label: `标签 1`, value: 'tab-1' },
+])
+const dynActive = ref('tab-1')
+function addTab() {
+  addCounter.value++
+  const value = `tab-${addCounter.value}`
+  dynTabs.value = [...dynTabs.value, { label: `标签 ${addCounter.value}`, value }]
+}
+function closeDynamic(value: string | number) {
+  dynTabs.value = dynTabs.value.filter((t) => t.value !== value)
+}
 </script>
 
 <template>
@@ -89,6 +113,27 @@ const cardTabs = [
           <p>📄 报告面板用了 <code>lazy</code>：首次被激活前不渲染内容（这里默认激活它就是它先挂载）。</p>
         </UiTabPanel>
       </UiTabs>
+    </UiCard>
+
+    <UiCard title="可关闭标签（作品㉚ 进阶）" style="max-width: 720px">
+      <UiTabs :tabs="closableTabs" closable default-active="home">
+        <UiTabPanel name="home"><p>🏠 首页。点其他标签的 ✕ 可关闭（设置项 closable:false 关不掉）。</p></UiTabPanel>
+        <UiTabPanel name="docs"><p>📚 文档页。</p></UiTabPanel>
+        <UiTabPanel name="settings"><p>⚙️ 设置页——这个被设为不可关闭。</p></UiTabPanel>
+      </UiTabs>
+      <p style="margin-top: 12px; color: var(--ui-text-2)">关闭当前激活项会自动切到相邻标签。</p>
+    </UiCard>
+
+    <UiCard title="动态新增/删除标签（v-model + 自动校准）" style="max-width: 720px">
+      <div style="margin-bottom: 16px">
+        <UiButton size="sm" @click="addTab">＋ 新增标签</UiButton>
+      </div>
+      <UiTabs v-model="dynActive" :tabs="dynTabs" closable type="card" @close="closeDynamic">
+        <UiTabPanel v-for="t in dynTabs" :key="t.value" :name="t.value">
+          <p>📑 这是 <code>{{ t.label }}</code> 的动态面板内容。</p>
+        </UiTabPanel>
+      </UiTabs>
+      <p style="margin-top: 12px; color: var(--ui-text-2)">v-model 受控 + 动态增删：删除当前激活项时 active 自动校准到剩余标签。</p>
     </UiCard>
   </div>
 </template>

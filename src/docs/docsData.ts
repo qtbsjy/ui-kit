@@ -660,16 +660,19 @@ export const docs: ComponentDoc[] = [
       '下划线指示器：querySelector 实测 offsetLeft/offsetWidth + nextTick 布局后定位',
       'Transition mode=out-in 面板切换动画',
       'lazy 懒挂载（首次激活才渲染面板内容）',
+      '可关闭 tab + 动态增删校准（close emit + active 自动回退）',
     ],
     api: [
-      { kind: 'prop', name: 'tabs', type: 'UiTabItem[]', default: '-', desc: '标签数据（label/value/disabled）' },
+      { kind: 'prop', name: 'tabs', type: 'UiTabItem[]', default: '-', desc: '标签数据（label/value/disabled/closable?）' },
       { kind: 'prop', name: 'modelValue', type: 'string \| number', default: '-', desc: 'v-model 激活项 value（受控）' },
       { kind: 'prop', name: 'defaultActive', type: 'string \| number', default: 'tabs[0].value', desc: '非受控初始激活项' },
       { kind: 'prop', name: 'type', type: `'line' \| 'card'`, default: `'line'`, desc: '样式变体' },
       { kind: 'prop', name: 'animated', type: 'boolean', default: 'true', desc: '面板切换动画开关' },
+      { kind: 'prop', name: 'closable', type: 'boolean', default: 'false', desc: '是否显示关闭按钮（单 tab closable 字段优先）' },
       { kind: 'slot', name: 'default', type: '-', default: '-', desc: '放置 UiTabPanel 面板' },
       { kind: 'event', name: 'update:modelValue', type: '(value)', default: '-', desc: '激活项变化（受控）' },
       { kind: 'event', name: 'change', type: '(value)', default: '-', desc: '激活项变化（受控与非受控都触发）' },
+      { kind: 'event', name: 'close', type: '(value)', default: '-', desc: '点击 tab 关闭按钮（父组件删除该 tab，删当前项时自动切相邻）' },
     ],
     examples: [
       {
@@ -707,6 +710,23 @@ export const docs: ComponentDoc[] = [
   <UiTabPanel :name="1">一号面板</UiTabPanel>
   <UiTabPanel :name="2">二号面板</UiTabPanel>
 </UiTabs>`,
+      },
+      {
+        title: '可关闭 + 动态增删（作品㉚ 进阶）',
+        desc: 'closable 显示 ✕，点击 emit close（父组件删除该 tab，删当前项自动切相邻）；tabs 变化后 active 不存在会自动校准。',
+        code: `<UiTabs
+  :tabs="tabs"
+  v-model="active"
+  closable
+  type="card"
+  @close="tabs = tabs.filter(t => t.value !== $event)">
+  <UiTabPanel v-for="t in tabs" :key="t.value" :name="t.value">
+    面板内容 {{ t.label }}
+  </UiTabPanel>
+</UiTabs>
+
+<!-- 新增标签：直接 push 到 tabs，active 自动跟随 -->
+<UiButton @click="addTab">＋ 新增</UiButton>`,
       },
     ],
   },

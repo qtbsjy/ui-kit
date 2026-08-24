@@ -17,6 +17,8 @@ export interface UiTabItem {
   label: string
   value: string | number
   disabled?: boolean
+  /** 单个 tab 是否可关闭（优先于全局 closable） */
+  closable?: boolean
 }
 
 const props = withDefaults(
@@ -31,18 +33,23 @@ const props = withDefaults(
     type?: 'line' | 'card'
     /** 面板切换动画开关 */
     animated?: boolean
+    /** 是否显示关闭按钮（可配合单 tab closable 字段） */
+    closable?: boolean
   }>(),
   {
     modelValue: undefined,
     defaultActive: undefined,
     type: 'line',
     animated: true,
+    closable: false,
   },
 )
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string | number): void
   (e: 'change', value: string | number): void
+  /** 点击 tab 关闭按钮时触发（父组件负责删掉该 tab） */
+  (e: 'close', value: string | number): void
 }>()
 
 // —— 激活态：受控优先，否则用内部 ref ——
@@ -63,6 +70,38 @@ function select(name: string | number) {
     emit('change', name)
   }
 }
+
+// —— 关闭 tab：仅 emit close（删 tab 由父组件负责，保持数据单向）
+// 若关闭的是当前激活项，自动切到相邻 tab（右优先，否则靠左）
+function handleClose(name: string | number) {
+  const idx = props.tabs.findIndex((t) => t.value === name)
+  // 关闭的是当前激活项 → 先切到相邻项，避免激活一个已不存在的 tab
+  if (active.value === name) {
+    const next =
+      props.tabs[idx + 1] ?? props.tabs[idx - 1]
+    if (next && !next.disabled) select(next.value)
+    else {
+      // 相邻项都没有，找任意一个非禁用
+      const any = props.tabs.find((t) => !t.disabled && t.value !== name)
+      if (any) select(any.value)
+      else if (!isControlled.value) internalActive.value = undefined
+    }
+  }
+  emit('close', name)
+}
+
+// —— 动态增删校准：tabs 变化后若当前 active 已不存在，回退到第一个可用 tab
+watch(
+  () => props.tabs.map((t) => t.value).join('|'),
+  () => {
+    const exists = props.tabs.some((t) => t.value === active.value)
+    if (!exists) {
+      const first = props.tabs.find((t) => !t.disabled)
+      if (first) select(first.value)
+      else if (!isControlled.value) internalActive.value = undefined
+    }
+  },
+)
 
 // —— provide 给 UiTabPanel ——
 const ctx: TabsContext = {
@@ -153,12 +192,25 @@ watch(
         :class="{
           'is-active': active === tab.value,
           'is-disabled': tab.disabled,
+          'is-closable': closable || tab.closable,
         }"
         :disabled="tab.disabled"
         @click="select(tab.value)"
         @keydown="onKeydown($event, i)"
       >
         {{ tab.label }}
+        <!-- 关闭按钮：仅 closable 时显示，点击停止冒泡避免误切 tab -->
+        <span
+          v-if="closable || tab.closable"
+          class="ui-tabs__close"
+          role="button"
+          :aria-label="`关闭 ${tab.label}`"
+          :tabindex="active === tab.value ? 0 : -1"
+          @click.stop="handleClose(tab.value)"
+          @keydown.enter.stop.prevent="handleClose(tab.value)"
+          @keydown.space.stop.prevent="handleClose(tab.value)"
+          >✕</span
+        >
       </button>
       <!-- line 风格：滑动下划线指示器 -->
       <span
@@ -212,6 +264,31 @@ watch(
   box-shadow: 0 0 0 2px var(--ui-primary);
   border-radius: 6px;
 }
+
+/* ---- 关闭按钮 ---- */
+.ui-tabs__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 6px;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--ui-text-3);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+  vertical-align: middle;
+}
+.ui-tabs__close:hover {
+  background: var(--ui-hover);
+  color: var(--ui-text-1);
+}
+.ui-tabs__close:focus-visible {
+  box-shadow: 0 0 0 2px var(--ui-primary);
+}
+.ui-tabs__tab.is-closable { padding-right: 10px; }
 
 /* ---- line 下划线指示器 ---- */
 .ui-tabs__indicator {

@@ -12,7 +12,7 @@
 //   8. provide/inject 解耦 — 面板不依赖 tabs 数组
 // ============================================================
 import { describe, it, expect, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import UiTabs from '../components/ui/UiTabs.vue'
 import UiTabPanel from '../components/ui/UiTabPanel.vue'
 
@@ -165,5 +165,75 @@ describe('UiTabs', () => {
     // 切到 team → lazy 面板首次挂载
     await w.findAll('.ui-tabs__tab')[1].trigger('click')
     expect(w.find('.p-team').exists()).toBe(true)
+  })
+
+  // ============ 作品㉚ 进阶：可关闭 + 动态增删 ============
+  it('closable 显示关闭按钮；点击 emit close 且不误切 tab', async () => {
+    const w = mountTabs({ closable: true, defaultActive: 'team' })
+    // 每个 tab 都有关闭按钮
+    const closes = w.findAll('.ui-tabs__close')
+    expect(closes).toHaveLength(3)
+    // 点非激活 tab(about) 的关闭 → emit close，但绝不误切到它（它在切才算 true）
+    await closes[0].trigger('click')
+    expect(w.emitted('close')![0]).toEqual(['about'])
+    // 关闭非激活项不触发 change
+    expect(w.emitted('change')).toBeUndefined()
+    // 关闭按钮本身可键盘触发（Enter）
+    await w.findAll('.ui-tabs__close')[0].trigger('keydown', { key: 'Enter' })
+    expect(w.emitted('close')!.length).toBe(2)
+    // 关闭当前激活项 → 自动切相邻（见下一个测试）
+  })
+
+  it('单个 tab closable 字段优先于全局', async () => {
+    const w = mount(UiTabs, {
+      props: {
+        tabs: [
+          { label: '固定', value: 'a' },
+          { label: '可关', value: 'b', closable: true },
+        ],
+      },
+      global: { components: { UiTabPanel } },
+    })
+    const closes = w.findAll('.ui-tabs__close')
+    expect(closes).toHaveLength(1) // 只有 b 有关闭按钮
+  })
+
+  it('关闭当前激活项：自动切到相邻 tab（非受控）', async () => {
+    const tabs = [
+      { label: 'A', value: 'a' },
+      { label: 'B', value: 'b' },
+      { label: 'C', value: 'c' },
+    ]
+    const w = mount(UiTabs, {
+      props: { tabs, defaultActive: 'b', closable: true },
+      global: { components: { UiTabPanel } },
+    })
+    // 关 B（当前激活）→ 自动切到右侧相邻 C
+    await w.findAll('.ui-tabs__close')[1].trigger('click')
+    expect(w.emitted('close')![0]).toEqual(['b'])
+    expect(w.emitted('change')![0]).toEqual(['c'])
+    expect(w.findAll('.ui-tabs__tab')[2].classes()).toContain('is-active')
+  })
+
+  it('动态增删校准：tabs 变化后 active 不存在则回退第一个可用项（非受控）', async () => {
+    // 用 wrapper 动态改 tabs prop，模拟删除当前激活项
+    const wrapper = {
+      components: { UiTabs },
+      data: () => ({
+        tabs: [
+          { label: '一', value: 1 },
+          { label: '二', value: 2 },
+          { label: '三', value: 3 },
+        ],
+      }),
+      template: `<UiTabs :tabs="tabs" :default-active="2" />`,
+    }
+    const w = mount(wrapper)
+    expect(w.findAll('.ui-tabs__tab')[1].classes()).toContain('is-active')
+    // 删除当前激活的 2 → active 应回退到第一个可用项 1
+    w.vm.tabs = w.vm.tabs.filter((t: any) => t.value !== 2)
+    await flushPromises()
+    expect(w.findAll('.ui-tabs__tab')).toHaveLength(2)
+    expect(w.findAll('.ui-tabs__tab')[0].classes()).toContain('is-active')
   })
 })
