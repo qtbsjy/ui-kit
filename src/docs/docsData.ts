@@ -596,6 +596,121 @@ export const docs: ComponentDoc[] = [
     ],
   },
 
+  // ================= 日期选择器（作品㉘） =================
+  {
+    id: 'datepicker',
+    name: 'UiDatePicker',
+    cn: '日期选择器',
+    category: '数据',
+    tagline: '日历弹层选择 + 手动输入 + 禁用范围 + 快捷选项',
+    desc: [
+      '完整的日期选择器：点击输入框或日历图标弹出日历面板，点选日期即可 v-model 绑定 YYYY-MM-DD 字符串。',
+      '日历网格算法：年/月切换（跨年自动处理）、闰年判断、当月天数 + 上/下月补位成 42 格；今天高亮、选中高亮、悬停反馈。',
+      '双通道输入：日历点选 + 输入框手动输入（input 事件解析校验），双向同步。',
+      'min/max 禁用边界日期；showShortcuts 快捷选项（今天/昨天）；外部点击自动关闭（v-click-outside）。',
+    ],
+    learned: ['defineModel 绑定日期字符串', '日历网格算法（年月切换/闰年/补位42格）', '弹层 + v-click-outside 点外关闭', '受控输入 + 日历点选双向同步', 'min/max 禁用 + 今天/选中/悬停高亮态'],
+    api: [
+      { kind: 'prop', name: 'modelValue', type: 'string', default: "''", desc: 'v-model 绑定日期 YYYY-MM-DD' },
+      { kind: 'prop', name: 'label', type: 'string', default: "''", desc: '字段标签' },
+      { kind: 'prop', name: 'placeholder', type: 'string', default: "'选择日期'", desc: '输入框占位' },
+      { kind: 'prop', name: 'disabled', type: 'boolean', default: 'false', desc: '禁用' },
+      { kind: 'prop', name: 'error', type: 'string', default: "''", desc: '错误提示（红框）' },
+      { kind: 'prop', name: 'min / max', type: 'string', default: "''", desc: '可选的日期范围边界（YYY-MM-DD）' },
+      { kind: 'prop', name: 'showShortcuts', type: 'boolean', default: 'false', desc: '显示快捷选项（今天/昨天）' },
+      { kind: 'event', name: 'update:modelValue', type: '(string)', default: '-', desc: '选择日期时触发' },
+    ],
+    examples: [
+      {
+        title: '基础用法',
+        desc: 'v-model 绑定日期字符串，点击图标弹出日历。',
+        code: `<UiDatePicker v-model="date" label="开始日期" />`,
+      },
+      {
+        title: '限制范围 + 快捷选项',
+        desc: 'min/max 限制可选范围，showShortcuts 提供今天/昨天快捷选择。',
+        code: `<UiDatePicker
+  v-model="date"
+  min="2026-01-01"
+  max="2026-12-31"
+  show-shortcuts
+  placeholder="选择日期" />`,
+      },
+    ],
+  },
+
+  // ================= 通用（作品㉙ · 标签页） =================
+  {
+    id: 'tabs',
+    name: 'UiTabs + UiTabPanel',
+    cn: '标签页',
+    category: '通用',
+    tagline: 'v-model 标签页，数据驱动 + 键盘无障碍 + 滑动指示器 + 面板解耦',
+    desc: [
+      '通用标签页组件。tabs 数据驱动渲染标签条，配合 UiTabPanel 声明面板内容。',
+      '标签与面板彻底解耦：UiTabs 只管 tabs 数组和标签条，UiTabPanel 通过 provide/inject 拿到激活态自动联动显隐，面板无需知道 tabs 数组。',
+      '双通道激活态：v-model 受控（modelValue）+ defaultActive 非受控初始值。',
+      '键盘无障碍：role=tablist/tab/tabpanel + 方向键切换 + Home/End 到头尾 + aria-selected，焦点跟随激活项。',
+      '两种风格：line（下划线滑动指示器，平滑跟随激活项）+ card（卡片）。UiTabPanel 支持 lazy 懒挂载 + 淡入淡出切换动画。',
+    ],
+    learned: [
+      'provide/inject 实现面板与标签解耦联动',
+      '受控/非受控双通道（modelValue vs internal ref）',
+      '键盘无障碍（tablist/tab/tabpanel + 方向键 + roving tabindex）',
+      '下划线指示器：querySelector 实测 offsetLeft/offsetWidth + nextTick 布局后定位',
+      'Transition mode=out-in 面板切换动画',
+      'lazy 懒挂载（首次激活才渲染面板内容）',
+    ],
+    api: [
+      { kind: 'prop', name: 'tabs', type: 'UiTabItem[]', default: '-', desc: '标签数据（label/value/disabled）' },
+      { kind: 'prop', name: 'modelValue', type: 'string \| number', default: '-', desc: 'v-model 激活项 value（受控）' },
+      { kind: 'prop', name: 'defaultActive', type: 'string \| number', default: 'tabs[0].value', desc: '非受控初始激活项' },
+      { kind: 'prop', name: 'type', type: `'line' \| 'card'`, default: `'line'`, desc: '样式变体' },
+      { kind: 'prop', name: 'animated', type: 'boolean', default: 'true', desc: '面板切换动画开关' },
+      { kind: 'slot', name: 'default', type: '-', default: '-', desc: '放置 UiTabPanel 面板' },
+      { kind: 'event', name: 'update:modelValue', type: '(value)', default: '-', desc: '激活项变化（受控）' },
+      { kind: 'event', name: 'change', type: '(value)', default: '-', desc: '激活项变化（受控与非受控都触发）' },
+    ],
+    examples: [
+      {
+        title: '基础标签页',
+        desc: 'tabs 数据驱动 + UiTabPanel 声明面板，name 与 value 对应。',
+        code: `<UiTabs
+  :tabs="[
+    { label: '简介', value: 'about' },
+    { label: '成员', value: 'team' },
+    { label: '设置', value: 'settings' },
+  ]">
+  <UiTabPanel name="about">这是简介面板。</UiTabPanel>
+  <UiTabPanel name="team">这是成员面板。</UiTabPanel>
+  <UiTabPanel name="settings">这是设置面板。</UiTabPanel>
+</UiTabs>`,
+      },
+      {
+        title: '禁用项 + 非受控初始值',
+        desc: 'disabled 的 tab 不可选中；defaultActive 指定初始激活项。',
+        code: `<UiTabs
+  :tabs="[
+    { label: '已启用', value: 'on' },
+    { label: '已禁用', value: 'off', disabled: true },
+  ]"
+  default-active="on" />`,
+      },
+      {
+        title: '卡片风格 + v-model',
+        desc: 'type=card 卡片式标签，v-model 受控绑定当前项。',
+        code: `<UiTabs v-model="active" type="card"
+  :tabs="[
+    { label: '标签一', value: 1 },
+    { label: '标签二', value: 2 },
+  ]">
+  <UiTabPanel :name="1">一号面板</UiTabPanel>
+  <UiTabPanel :name="2">二号面板</UiTabPanel>
+</UiTabs>`,
+      },
+    ],
+  },
+
   // ================= 通用（进阶：provide/inject） =================
   {
     id: 'config-provider',
