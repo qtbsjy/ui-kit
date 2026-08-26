@@ -5,6 +5,8 @@
 //   2. 排序 (点击表头循环 asc→desc→none, 不可变数据更新)
 //   3. 分页 (computed 切片当前页数据, 内置分页控件)
 //   4. 空态/加载态
+//   5. 表头固定 (stickyHeader: 滚动容器内 position:sticky 表头)
+//   6. 多选 (selectable: 行选择 + 全选/半选/跨页)
 import { computed, ref } from 'vue'
 
 export type SortOrder = 'asc' | 'desc' | null
@@ -43,6 +45,16 @@ const props = withDefaults(
     /** 排序状态受控（可选，用于外部控制） */
     sortKey?: string
     sortOrder?: SortOrder
+    /** 表头固定：限制高度内滚动，表头吸附顶部 */
+    stickyHeader?: boolean
+    /** 表头固定时可视区最大高度（如 '400px'） */
+    maxHeight?: string
+    /** 开启行选择（多选） */
+    selectable?: boolean
+    /** 行的唯一标识字段（默认 'key'） */
+    rowKey?: string
+    /** 已选行 key 列表（受控） */
+    selected?: (string | number)[]
   }>(),
   {
     pageSize: 10,
@@ -52,6 +64,11 @@ const props = withDefaults(
     dense: false,
     sortKey: '',
     sortOrder: null,
+    stickyHeader: false,
+    maxHeight: '300px',
+    selectable: false,
+    rowKey: 'key',
+    selected: () => [],
   },
 )
 
@@ -61,7 +78,14 @@ const emit = defineEmits<{
   'update:sortOrder': [order: SortOrder]
   /** 页码变化 */
   'update:currentPage': [page: number]
+  /** 行选择变化 */
+  'update:selected': [keys: (string | number)[]]
 }>()
+
+// ---------- 行 key 提取 ----------
+function rowId(row: any): string | number {
+  return row?.[props.rowKey] ?? row?.key
+}
 
 // ---------- 排序状态 ----------
 // 受控模式: 外部通过 sortKey/sortOrder 控制; 非受控: 内部维护
@@ -123,6 +147,52 @@ function goPage(p: number) {
   emit('update:currentPage', currentPage.value)
 }
 
+// ---------- 行选择（多选）----------
+// 受控: 外部通过 selected 控制; 非受控: 内部维护
+const internalSelected = ref<(string | number)[]>([])
+const selected = computed<(string | number)[]>(() =>
+  props.selected.length ? props.selected : internalSelected.value,
+)
+function setSelected(keys: (string | number)[]) {
+  if (props.selected.length) {
+    emit('update:selected', keys)
+  } else {
+    internalSelected.value = keys
+  }
+}
+function isSelected(row: any): boolean {
+  return selected.value.includes(rowId(row))
+}
+// 当前页可见行 id（排除加载/空态）
+const pageRowIds = computed<(string | number)[]>(() =>
+  tableData.value.map((r) => rowId(r)).filter((id) => id !== undefined),
+)
+// 当前页是否全选 / 部分选中
+const pageAllSelected = computed(
+  () => pageRowIds.value.length > 0 && pageRowIds.value.every((id) => selected.value.includes(id)),
+)
+const pageSomeSelected = computed(
+  () => pageRowIds.value.some((id) => selected.value.includes(id)) && !pageAllSelected.value,
+)
+// 表头全选/取消（作用于当前页可见行，保留其它页已选）
+function togglePageSelect() {
+  const current = new Set(selected.value)
+  if (pageAllSelected.value) {
+    pageRowIds.value.forEach((id) => current.delete(id))
+  } else {
+    pageRowIds.value.forEach((id) => current.add(id))
+  }
+  setSelected([...current])
+}
+// 单行切换选中
+function toggleRow(row: any) {
+  const id = rowId(row)
+  const current = new Set(selected.value)
+  if (current.has(id)) current.delete(id)
+  else current.add(id)
+  setSelected([...current])
+}
+
 // 供模板用的数据
 const tableData = computed(() => {
   if (props.loading) return []
@@ -130,6 +200,8 @@ const tableData = computed(() => {
   return sortedData.value
 })
 const showPagination = computed(() => props.pageSize > 0 && !props.loading && sortedData.value.length > 0)
+// 状态单元格（加载/空态）跨列数，多选时 +1 选择列
+const colspanTotal = computed(() => props.columns.length + (props.selectable ? 1 : 0))
 
 // 排序图标
 function sortIcon(order: SortOrder, active: boolean): string {
@@ -139,11 +211,26 @@ function sortIcon(order: SortOrder, active: boolean): string {
 </script>
 
 <template>
-  <div class="ui-table" :class="{ 'is-dense': dense }">
-    <div class="ui-table__scroll">
+  <div class="ui-table" :class="{ 'is-dense': dense, 'is-sticky': stickyHeader }">
+    <div
+      class="ui-table__scroll"
+      :class="{ 'ui-table__scroll--sticky': stickyHeader }"
+      :style="stickyHeader ? { maxHeight } : undefined"
+    >
       <table class="ui-table__table" :class="{ 'is-striped': striped }">
         <thead>
           <tr>
+            <!-- 选择列 -->
+            <th v-if="selectable" class="ui-table__check">
+              <input
+                type="checkbox"
+                class="ui-table__checkbox"
+                aria-label="全选当前页"
+                :checked="pageAllSelected"
+                :indeterminate="pageSomeSelected"
+                @change="togglePageSelect"
+              />
+            </th>
             <th
               v-for="col in columns"
               :key="col.key"
@@ -160,16 +247,24 @@ function sortIcon(order: SortOrder, active: boolean): string {
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td :colspan="columns.length" class="ui-table__state">
+            <td :colspan="colspanTotal" class="ui-table__state">
               <span class="ui-table__loading">加载中…</span>
             </td>
           </tr>
           <tr v-else-if="tableData.length === 0">
-            <td :colspan="columns.length" class="ui-table__state">
+            <td :colspan="colspanTotal" class="ui-table__state">
               <span class="ui-table__empty">📭 {{ emptyText }}</span>
             </td>
           </tr>
-          <tr v-for="(row, i) in tableData" :key="i">
+          <tr v-for="(row, i) in tableData" :key="i" :class="{ 'is-selected': isSelected(row) }">
+            <td v-if="selectable" class="ui-table__check">
+              <input
+                type="checkbox"
+                class="ui-table__checkbox"
+                :checked="isSelected(row)"
+                @change="toggleRow(row)"
+              />
+            </td>
             <td
               v-for="col in columns"
               :key="col.key"
@@ -206,6 +301,30 @@ function sortIcon(order: SortOrder, active: boolean): string {
   color: var(--ui-text-1);
 }
 .ui-table__scroll { overflow-x: auto; }
+/* 表头固定: 让滚动容器同时可纵向滚动，表头 sticky 吸附顶部 */
+.ui-table__scroll--sticky { overflow: auto; }
+.ui-table.is-sticky .ui-table__table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  /* sticky 需要不透明背景，否则下方内容会透出来 */
+  background: var(--ui-bg-soft, #f7f8fa);
+  box-shadow: 0 1px 0 var(--ui-border);
+}
+.ui-table__check {
+  width: 40px;
+  text-align: center !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+.ui-table__checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ui-primary, #4f46e5);
+  cursor: pointer;
+  vertical-align: middle;
+}
+.ui-table__table tbody tr.is-selected { background: color-mix(in srgb, var(--ui-primary, #4f46e5) 8%, transparent); }
 .ui-table__table { width: 100%; border-collapse: collapse; }
 .ui-table__table th, .ui-table__table td {
   padding: 12px 14px;

@@ -149,3 +149,74 @@ describe('UiTable 作用域插槽与格式化', () => {
     expect(wrapper.html()).toContain('<b>name=张三(北京)</b>')
   })
 })
+
+describe('UiTable 表头固定（sticky）', () => {
+  it('开启 stickyHeader 时滚动容器获得 max-height 与 sticky 类', () => {
+    const wrapper = mountTable({ stickyHeader: true, maxHeight: '400px' })
+    const scroll = wrapper.find('.ui-table__scroll')
+    expect(scroll.classes()).toContain('ui-table__scroll--sticky')
+    expect(scroll.attributes('style')).toContain('max-height: 400px')
+    // thead th 带 sticky 类由 CSS 实现，这里验证容器生效
+    expect(wrapper.find('thead th').exists()).toBe(true)
+  })
+
+  it('不开启时滚动容器无 sticky', () => {
+    const wrapper = mountTable()
+    expect(wrapper.find('.ui-table__scroll').classes()).not.toContain('ui-table__scroll--sticky')
+  })
+})
+
+describe('UiTable 多选（行选择）', () => {
+  const selData = [
+    { key: 1, name: '张三', age: 30, city: '北京' },
+    { key: 2, name: '李四', age: 25, city: '上海' },
+    { key: 3, name: '王五', age: 35, city: '广州' },
+  ]
+
+  it('selectable 渲染选择列，行 checkbox 与表头全选 checkbox', () => {
+    const wrapper = mount(UiTable, { props: { columns, data: selData, selectable: true, rowKey: 'key' } })
+    expect(wrapper.findAll('thead th.ui-table__check')).toHaveLength(1)
+    expect(wrapper.findAll('tbody tr td.ui-table__check')).toHaveLength(3)
+  })
+
+  it('勾选单行被选中，行高亮 + 表头半选态', async () => {
+    const wrapper = mount(UiTable, { props: { columns, data: selData, selectable: true, rowKey: 'key' } })
+    const rowChecks = wrapper.findAll('tbody tr td.ui-table__check input')
+    await rowChecks[0].setValue(true)
+    expect(wrapper.findAll('tbody tr')[0].classes()).toContain('is-selected')
+    const headerCheck = wrapper.find('thead th.ui-table__check input').element as HTMLInputElement
+    expect(headerCheck.indeterminate).toBe(true)
+  })
+
+  it('表头全选当前页所有行', async () => {
+    const wrapper = mount(UiTable, { props: { columns, data: selData, selectable: true, rowKey: 'key' } })
+    await wrapper.find('thead th.ui-table__check input').setValue(true)
+    expect(wrapper.findAll('tbody tr.is-selected')).toHaveLength(3)
+  })
+
+  it('全选后再点表头取消全选', async () => {
+    const wrapper = mount(UiTable, { props: { columns, data: selData, selectable: true, rowKey: 'key' } })
+    const header = wrapper.find('thead th.ui-table__check input')
+    await header.setValue(true)
+    expect(wrapper.findAll('tbody tr.is-selected')).toHaveLength(3)
+    await header.setValue(false)
+    expect(wrapper.findAll('tbody tr.is-selected')).toHaveLength(0)
+  })
+
+  it('跨页全选只作用于当前页，切换页保留其它页已选', async () => {
+    const six = Array.from({ length: 6 }, (_, i) => ({ key: i + 1, name: `人${i + 1}`, age: 20 + i, city: '测试' }))
+    const wrapper = mount(UiTable, { props: { columns, data: six, selectable: true, rowKey: 'key', pageSize: 3 } })
+    await wrapper.find('thead th.ui-table__check input').setValue(true)
+    expect(wrapper.findAll('tbody tr.is-selected')).toHaveLength(3)
+    await wrapper.findAll('.ui-table__page-btn')[1].trigger('click')
+    expect(wrapper.findAll('tbody tr.is-selected')).toHaveLength(0)
+    await wrapper.find('thead th.ui-table__check input').setValue(true)
+    await wrapper.findAll('.ui-table__page-btn')[0].trigger('click')
+    expect(wrapper.findAll('tbody tr.is-selected')).toHaveLength(3)
+  })
+
+  it('受控 selected 外部控制选中态', () => {
+    const wrapper = mount(UiTable, { props: { columns, data: selData, selectable: true, rowKey: 'key', selected: [1, 2] } })
+    expect(wrapper.findAll('tbody tr.is-selected')).toHaveLength(2)
+  })
+})

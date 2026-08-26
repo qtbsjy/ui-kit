@@ -101,7 +101,10 @@ describe('UiDatePicker', () => {
     const w = mountPicker()
     await w.find('.ui-datepicker__icon').trigger('click')
     const today = new Date()
-    const todayCell = w.findAll('.dp-cell').find((c) => c.text().trim() === String(today.getDate()))!
+    // 过滤掉跨月补位格(is-out)，只找当月数字格
+    const todayCell = w
+      .findAll('.dp-cell')
+      .find((c) => !c.classes().includes('is-out') && c.text().trim() === String(today.getDate()))!
     expect(todayCell.classes()).toContain('is-today')
   })
 

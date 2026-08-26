@@ -547,14 +547,16 @@ export const docs: ComponentDoc[] = [
     name: 'UiTable',
     cn: '数据表格',
     category: '数据',
-    tagline: '列配置驱动 + 排序 + 分页 + 作用域插槽',
+    tagline: '列配置驱动 + 排序 + 分页 + 作用域插槽 + 表头固定 + 多选',
     desc: [
       '企业级数据表格。列配置（columns）驱动渲染，一行配置即可出表，业务代码零模板重复。',
       '排序：点击表头循环 asc→desc→none（不可变数据更新），支持数字/字符串(中文 locale)/日期比较，也可受控（sortKey/sortOrder + update 事件）。',
       '分页：pageSize>0 时内置分页控件，computed 切片当前页数据，排序结果分页联动。',
+      '表头固定：stickyHeader + maxHeight 让容器受限滚动，表头 position:sticky 吸附顶部（需不透明背景遮住透出内容）。',
+      '多选：selectable + rowKey 开启行选择，表头 checkbox 全选当前页（跨页保留已选）、半选态、行高亮，v-model:selected 受控或内部非受控。',
       '作用域插槽 #cell（row/column/index/value）优先于 formatter 自定义单元格；自带空态/加载态（含旋转动画）/斑马纹/紧凑模式。',
     ],
-    learned: ['列配置驱动渲染（数据即视图）', '排序状态受控/非受控双模式（内部 ref vs props 受控）', 'computed 不可变排序 + 分页切片联动', '作用域插槽 + formatter 双通道自定义单元格', 'colspan 空态/加载态行'],
+    learned: ['列配置驱动渲染（数据即视图）', '排序状态受控/非受控双模式（内部 ref vs props 受控）', 'computed 不可变排序 + 分页切片联动', 'position:sticky 表头固定（滚动容器内吸附，需不透明背景）', '多选：Set 管理选中集，表头全选当前页 + 半选态（indeterminate）', '作用域插槽 + formatter 双通道自定义单元格', 'colspan 空态/加载态行'],
     api: [
       { kind: 'prop', name: 'columns', type: 'TableColumn[]', default: '-', desc: '列配置（key/label/width/align/sortable/formatter）' },
       { kind: 'prop', name: 'data', type: 'any[]', default: '-', desc: '数据行' },
@@ -563,11 +565,17 @@ export const docs: ComponentDoc[] = [
       { kind: 'prop', name: 'emptyText', type: 'string', default: '暂无数据', desc: '空态文案' },
       { kind: 'prop', name: 'striped', type: 'boolean', default: 'false', desc: '斑马纹' },
       { kind: 'prop', name: 'dense', type: 'boolean', default: 'false', desc: '紧凑模式' },
+      { kind: 'prop', name: 'stickyHeader', type: 'boolean', default: 'false', desc: '表头固定（需配合 maxHeight）' },
+      { kind: 'prop', name: 'maxHeight', type: 'string', default: "'300px'", desc: '表头固定时滚动容器最大高度' },
+      { kind: 'prop', name: 'selectable', type: 'boolean', default: 'false', desc: '开启行选择（多选）' },
+      { kind: 'prop', name: 'rowKey', type: 'string', default: "'key'", desc: '行的唯一标识字段（多选必填）' },
+      { kind: 'prop', name: 'selected', type: '(string\|number)[]', default: '[]', desc: '已选行 key 列表（受控）' },
       { kind: 'prop', name: 'sortKey / sortOrder', type: 'string / SortOrder', default: '-', desc: '受控排序状态（外部控制时传）' },
       { kind: 'slot', name: 'cell', type: '{row,column,index,value}', default: '-', desc: '自定义单元格（优先于 formatter）' },
       { kind: 'event', name: 'update:sortKey', type: '(key)', default: '-', desc: '排序字段变化' },
       { kind: 'event', name: 'update:sortOrder', type: '(order)', default: '-', desc: '排序方向变化' },
       { kind: 'event', name: 'update:currentPage', type: '(page)', default: '-', desc: '页码变化' },
+      { kind: 'event', name: 'update:selected', type: '(keys)', default: '-', desc: '选中集变化' },
     ],
     examples: [
       {
@@ -580,6 +588,22 @@ export const docs: ComponentDoc[] = [
     { key: 'city', label: '城市' },
   ]"
   :data="rows" :page-size="3" />`,
+      },
+      {
+        title: '表头固定',
+        desc: 'stickyHeader 让表头在受限高度内滚动时吸附顶部。',
+        code: `<UiTable :columns="cols" :data="rows" sticky-header max-height="320px" />`,
+      },
+      {
+        title: '多选（行选择）',
+        desc: 'rowKey 指定行唯一键，v-model:selected 受控选中集；表头全选当前页，跨页保留已选。',
+        code: `<UiTable
+  :columns="cols"
+  :data="rows"
+  selectable
+  row-key="id"
+  v-model:selected="selected"
+/>`,
       },
       {
         title: '作用域插槽自定义单元格',

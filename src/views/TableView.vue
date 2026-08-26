@@ -55,6 +55,12 @@ const statusMap = {
   disabled: { text: '离职', color: 'gray' },
 } as const
 
+// 多选（行选择）受控
+const selected = ref<number[]>([])
+function onSelected(keys: (string | number)[]) {
+  selected.value = keys as number[]
+}
+
 function fmtDate(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
@@ -106,6 +112,41 @@ function fmtDate(d: Date) {
       @update:sort-key="onSortKey"
       @update:sort-order="onSortOrder"
     />
+
+    <h2>表头固定（stickyHeader）</h2>
+    <p class="sub">容器高度受限，滚动时表头吸附顶部不消失 —— 数据量大时的刚需</p>
+    <UiTable
+      :columns="columns"
+      :data="rows"
+      :page-size="0"
+      sticky-header
+      max-height="320px"
+    />
+
+    <h2>多选（selectable）</h2>
+    <p class="sub">行选择 + 表头全选当前页 + 半选态 + 跨页保留。已选 {{ selected.length }} 行</p>
+    <div class="controls">
+      <button @click="selected = []">清空选择</button>
+      <button @click="selected = rows.map((r) => r.id)">全选所有</button>
+      <span class="hint">selected: {{ selected.slice(0, 8).join(', ') }}{{ selected.length > 8 ? ' …' : '' }}</span>
+    </div>
+    <UiTable
+      :columns="columns"
+      :data="rows"
+      :page-size="6"
+      selectable
+      row-key="id"
+      :selected="selected"
+      @update:selected="onSelected"
+    >
+      <template #cell="{ column, value, row }">
+        <UiBadge v-if="column.key === 'status'" :color="(statusMap as any)[value].color">
+          {{ (statusMap as any)[value].text }}
+        </UiBadge>
+        <span v-else-if="column.key === 'joinDate'">{{ fmtDate(value as Date) }}</span>
+        <span v-else>{{ value }}</span>
+      </template>
+    </UiTable>
   </div>
 </template>
 

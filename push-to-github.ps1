@@ -15,7 +15,7 @@ $ErrorActionPreference = 'Continue'
 # ---------- 配置 ----------
 $repo = "qtbsjy/ui-kit"
 $branch = "main"
-$message = "feat: UiKit 全量代码 - 18组件/5composable/5指令/122测试 (作品06-24)"
+$message = "feat: work31 UiTable enhance - sticky header + multi-select + 8 tests (165 green)"
 # 排除的文件/目录
 $exclude = @(
   '.git', 'node_modules', 'dist', 'dist-ssr', 'coverage',
