@@ -76,6 +76,11 @@ const router = createRouter({
       name: 'checkbox',
       component: () => import('../views/CheckboxView.vue'),
     },
+    {
+      path: '/slider',
+      name: 'slider',
+      component: () => import('../views/SliderView.vue'),
+    },
   ],
 })
 

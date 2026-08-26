@@ -32,6 +32,7 @@ import UiCheckbox from './ui/UiCheckbox.vue'
 import UiCheckboxGroup from './ui/UiCheckboxGroup.vue'
 import UiRadio from './ui/UiRadio.vue'
 import UiRadioGroup from './ui/UiRadioGroup.vue'
+import UiSlider from './ui/UiSlider.vue'
 import type { TableColumn, SortOrder } from './ui/UiTable.vue'
 import { useFormValidator } from '../composables/useFormValidator'
 import { useTheme } from '../composables/useTheme'
@@ -68,6 +69,7 @@ export {
   UiCheckboxGroup,
   UiRadio,
   UiRadioGroup,
+  UiSlider,
 }
 
 // 类型导出：让消费方 `import type { TableColumn, SortOrder } from 'ui-kit'`
@@ -93,7 +95,7 @@ const UiKit = {
     const components = {
       UiButton, UiBadge, UiCard, UiModal, UiProgress, UiToast, UiInput, UiTextarea, UiSelect, UiSwitch,
       UiGrid, UiGridItem, UiContainer, UiSpacer, UiVirtualList, UiConfigProvider, UiSkeleton, UiInstallPwa,
-      UiTable, UiDatePicker, UiTabs, UiTabPanel, UiCheckbox, UiCheckboxGroup, UiRadio, UiRadioGroup,
+      UiTable, UiDatePicker, UiTabs, UiTabPanel, UiCheckbox, UiCheckboxGroup, UiRadio, UiRadioGroup, UiSlider,
     }
     for (const [name, comp] of Object.entries(components)) {
       app.component(name, comp)

@@ -15,7 +15,7 @@ $ErrorActionPreference = 'Continue'
 # ---------- 配置 ----------
 $repo = "qtbsjy/ui-kit"
 $branch = "main"
-$message = "feat: work33 UiCheckbox/UiRadio form family + 18 tests (189 green)"
+$message = "feat: work34 UiSlider - single + dual range native input + 15 tests (204 green)"
 # 排除的文件/目录
 $exclude = @(
   '.git', 'node_modules', 'dist', 'dist-ssr', 'coverage',

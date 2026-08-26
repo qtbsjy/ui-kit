@@ -379,6 +379,42 @@ export const docs: ComponentDoc[] = [
       },
     ],
   },
+  {
+    id: 'slider',
+    name: 'UiSlider',
+    cn: '滑条',
+    category: '表单',
+    tagline: '单值 / 双端 range，基于原生 input',
+    desc: [
+      '滑条：defineModel<number> 单值；range 模式用 [number, number] 双端值（v-model）。',
+      '基于原生 input[type=range]——键盘方向键/无障碍/触摸拖动白拿，只做 CSS 美化 + 双 thumb 联动。',
+      '双端 range = 两个原生 range 叠加在同一轨道，动态限制下/上限（lower≤upper-step）防交叉。',
+      '轨道填充用独立 div 渲染（淡底 bar + 主色 fill），规避 webkit/moz 引擎差异。showValue 显示当前值。',
+    ],
+    learned: ['defineModel<number> 与 [number,number] 双端', '原生 range 复用（键盘/无障碍/触摸白拿）', '双 range 叠加联动 + 动态 max/min 防交叉', '轨道填充独立 div（引擎无关）', 'script setup 双值受控同步 watch'],
+    api: [
+      { kind: 'prop', name: 'modelValue', type: 'number|[number,number]', default: '0', desc: 'v-model: 单值或双端数组' },
+      { kind: 'prop', name: 'min', type: 'number', default: '0', desc: '最小值' },
+      { kind: 'prop', name: 'max', type: 'number', default: '100', desc: '最大值' },
+      { kind: 'prop', name: 'step', type: 'number', default: '1', desc: '步长' },
+      { kind: 'prop', name: 'range', type: 'boolean', default: 'false', desc: '双端 range 模式' },
+      { kind: 'prop', name: 'showValue', type: 'boolean', default: 'false', desc: '显示当前值' },
+      { kind: 'prop', name: 'disabled', type: 'boolean', default: 'false', desc: '禁用' },
+      { kind: 'event', name: 'update:modelValue', type: 'number|[number,number]', default: '-', desc: 'v-model 更新事件' },
+    ],
+    examples: [
+      {
+        title: '单值滑条',
+        desc: 'v-model 数字，showValue 显示当前值。',
+        code: `<UiSlider v-model="volume" label="音量" :min="0" :max="100" show-value />`,
+      },
+      {
+        title: '双端 range',
+        desc: 'range 模式 v-model 双端数组，价格/区间选择。',
+        code: `<UiSlider v-model="price" label="价格范围" :min="0" :max="200" :step="10" range show-value />`,
+      },
+    ],
+  },
 
   // ================= 反馈 =================
   {
