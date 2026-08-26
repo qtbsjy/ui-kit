@@ -28,6 +28,10 @@ import UiTable from './ui/UiTable.vue'
 import UiDatePicker from './ui/UiDatePicker.vue'
 import UiTabs from './ui/UiTabs.vue'
 import UiTabPanel from './ui/UiTabPanel.vue'
+import UiCheckbox from './ui/UiCheckbox.vue'
+import UiCheckboxGroup from './ui/UiCheckboxGroup.vue'
+import UiRadio from './ui/UiRadio.vue'
+import UiRadioGroup from './ui/UiRadioGroup.vue'
 import type { TableColumn, SortOrder } from './ui/UiTable.vue'
 import { useFormValidator } from '../composables/useFormValidator'
 import { useTheme } from '../composables/useTheme'
@@ -60,6 +64,10 @@ export {
   UiDatePicker,
   UiTabs,
   UiTabPanel,
+  UiCheckbox,
+  UiCheckboxGroup,
+  UiRadio,
+  UiRadioGroup,
 }
 
 // 类型导出：让消费方 `import type { TableColumn, SortOrder } from 'ui-kit'`
@@ -85,7 +93,7 @@ const UiKit = {
     const components = {
       UiButton, UiBadge, UiCard, UiModal, UiProgress, UiToast, UiInput, UiTextarea, UiSelect, UiSwitch,
       UiGrid, UiGridItem, UiContainer, UiSpacer, UiVirtualList, UiConfigProvider, UiSkeleton, UiInstallPwa,
-      UiTable, UiDatePicker, UiTabs, UiTabPanel,
+      UiTable, UiDatePicker, UiTabs, UiTabPanel, UiCheckbox, UiCheckboxGroup, UiRadio, UiRadioGroup,
     }
     for (const [name, comp] of Object.entries(components)) {
       app.component(name, comp)

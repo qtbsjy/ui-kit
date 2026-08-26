@@ -71,6 +71,11 @@ const router = createRouter({
       name: 'tabs',
       component: () => import('../views/TabsView.vue'),
     },
+    {
+      path: '/checkbox',
+      name: 'checkbox',
+      component: () => import('../views/CheckboxView.vue'),
+    },
   ],
 })
 

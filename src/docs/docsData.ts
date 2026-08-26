@@ -304,6 +304,82 @@ export const docs: ComponentDoc[] = [
     ],
   },
 
+  // ================= 表单（复选/单选） =================
+  {
+    id: 'checkbox',
+    name: 'UiCheckbox / UiCheckboxGroup',
+    cn: '复选框 / 复选组',
+    category: '表单',
+    tagline: '复选框 + 复选组，provide/inject 联动 + 全选',
+    desc: [
+      '复选框：defineModel<boolean> 单选，v-model 双向；label 文案 + 键盘无障碍（原生 input 默认支持空格），自绘 box + svg 对勾。',
+      '复选组 UiCheckboxGroup：管理 (string|number|boolean)[] 数组，provide CheckboxGroupKey 给子 UiCheckbox 自动联动多选。',
+      'showCheckAll 全选（含半选态 indeterminate），options 数据驱动或插槽自定义子项。',
+      '组内 UiCheckbox 带 value 属性，选中即加入/移出数组；独立使用时 value 忽略，走自身 boolean model。',
+    ],
+    learned: ['provide/inject 组上下文（InjectionKey 类型安全）', 'defineModel<boolean> 与组数组双通道', 'checkbox 半选态（:indeterminate DOM 属性）', '原生 input + label 隐藏美化（opacity:0 + pointer-events:none + 自绘）', '<script setup> 不允许运行时 export，上下文 Key 抽到独立 .ts'],
+    api: [
+      { kind: 'prop', name: 'modelValue', type: 'boolean', default: 'false', desc: 'v-model 选中状态（独立用时）' },
+      { kind: 'prop', name: 'label', type: 'string', default: "''", desc: '展示文案' },
+      { kind: 'prop', name: 'disabled', type: 'boolean', default: 'false', desc: '禁用' },
+      { kind: 'prop', name: 'value', type: 'string|number|boolean', default: 'true', desc: '组内成员的值（配合 UiCheckboxGroup）' },
+      { kind: 'prop', name: 'modelValue（组）', type: '(string|number|boolean)[]', default: '[]', desc: 'UiCheckboxGroup: v-model 选中值数组' },
+      { kind: 'prop', name: 'options', type: '{label,value}[]', default: '[]', desc: 'UiCheckboxGroup: 数据驱动子项' },
+      { kind: 'prop', name: 'showCheckAll', type: 'boolean', default: 'false', desc: 'UiCheckboxGroup: 显示全选' },
+      { kind: 'event', name: 'update:modelValue', type: 'boolean|array', default: '-', desc: 'v-model 更新事件' },
+    ],
+    examples: [
+      {
+        title: '独立复选框',
+        desc: '单选框 v-model 布尔值。',
+        code: `<UiCheckbox v-model="agree" label="我同意用户协议" />
+<UiCheckbox label="禁用项" disabled />`,
+      },
+      {
+        title: '复选组 + 全选',
+        desc: '数据驱动多选，showCheckAll 一键全选/取消。',
+        code: `<UiCheckboxGroup
+  v-model="hobbies"
+  :options="[{label:'阅读',value:'reading'},{label:'运动',value:'sports'}]"
+  label="兴趣爱好"
+  show-check-all
+/>`,
+      },
+    ],
+  },
+  {
+    id: 'radio',
+    name: 'UiRadio / UiRadioGroup',
+    cn: '单选项 / 单选组',
+    category: '表单',
+    tagline: '单选项 + 单选组，值相等判定 + 原生互斥',
+    desc: [
+      '单选项 UiRadio：受控，value + modelValue 相等即选中（单选本质是"值相等"），点选更新 model。',
+      '单选组 UiRadioGroup：provide RadioGroupKey 给子 UiRadio，组内同值互斥；自动生成 name 供原生 radio 分组（方向键导航受浏览器支持）。',
+      'options 数据驱动或插槽自定义子项，支持 string/number/boolean 值。',
+    ],
+    learned: ['受控组件 + 值相等判定选中', 'provide/inject 组互斥', '原生 radio 同 name 分组（方向键）', '上下文 Key 抽独立 .ts（script setup 不能运行时 export）'],
+    api: [
+      { kind: 'prop', name: 'modelValue', type: 'string|number|boolean', default: "''", desc: 'v-model 选中值' },
+      { kind: 'prop', name: 'label', type: 'string', default: "''", desc: '展示文案' },
+      { kind: 'prop', name: 'value', type: 'string|number|boolean', default: '-', desc: '该项的值' },
+      { kind: 'prop', name: 'disabled', type: 'boolean', default: 'false', desc: '禁用' },
+      { kind: 'prop', name: 'options', type: '{label,value}[]', default: '[]', desc: 'UiRadioGroup: 数据驱动子项' },
+      { kind: 'event', name: 'update:modelValue', type: 'string|number|boolean', default: '-', desc: 'v-model 更新事件' },
+    ],
+    examples: [
+      {
+        title: '单选组',
+        desc: '数据驱动互斥单选，组内方向键切换。',
+        code: `<UiRadioGroup
+  v-model="gender"
+  :options="[{label:'男',value:'male'},{label:'女',value:'female'}]"
+  label="性别"
+/>`,
+      },
+    ],
+  },
+
   // ================= 反馈 =================
   {
     id: 'modal',

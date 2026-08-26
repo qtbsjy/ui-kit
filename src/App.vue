@@ -26,6 +26,7 @@ function onToggle() {
         <RouterLink to="/directives">🛠️ 指令集</RouterLink>
         <RouterLink to="/table">📊 数据表格</RouterLink>
         <RouterLink to="/tabs">🗂️ 标签页</RouterLink>
+        <RouterLink to="/checkbox">☑️ 复选/单选</RouterLink>
       </div>
       <button class="theme-toggle" :title="isDark ? '切到浅色' : '切到深色'" @click="onToggle">
         {{ isDark ? '☀️' : '🌙' }}
