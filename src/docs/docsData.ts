@@ -547,16 +547,17 @@ export const docs: ComponentDoc[] = [
     name: 'UiTable',
     cn: '数据表格',
     category: '数据',
-    tagline: '列配置驱动 + 排序 + 分页 + 作用域插槽 + 表头固定 + 多选',
+    tagline: '列配置驱动 + 排序 + 分页 + 作用域插槽 + 表头固定 + 多选 + 列宽拖动',
     desc: [
       '企业级数据表格。列配置（columns）驱动渲染，一行配置即可出表，业务代码零模板重复。',
       '排序：点击表头循环 asc→desc→none（不可变数据更新），支持数字/字符串(中文 locale)/日期比较，也可受控（sortKey/sortOrder + update 事件）。',
       '分页：pageSize>0 时内置分页控件，computed 切片当前页数据，排序结果分页联动。',
       '表头固定：stickyHeader + maxHeight 让容器受限滚动，表头 position:sticky 吸附顶部（需不透明背景遮住透出内容）。',
       '多选：selectable + rowKey 开启行选择，表头 checkbox 全选当前页（跨页保留已选）、半选态、行高亮，v-model:selected 受控或内部非受控。',
+      '列宽拖动：resizable 开启后表头右侧有拖拽手柄，可调列宽（受控 columnWidths 或非受控），minColWidth 防止拖太窄。',
       '作用域插槽 #cell（row/column/index/value）优先于 formatter 自定义单元格；自带空态/加载态（含旋转动画）/斑马纹/紧凑模式。',
     ],
-    learned: ['列配置驱动渲染（数据即视图）', '排序状态受控/非受控双模式（内部 ref vs props 受控）', 'computed 不可变排序 + 分页切片联动', 'position:sticky 表头固定（滚动容器内吸附，需不透明背景）', '多选：Set 管理选中集，表头全选当前页 + 半选态（indeterminate）', '作用域插槽 + formatter 双通道自定义单元格', 'colspan 空态/加载态行'],
+    learned: ['列配置驱动渲染（数据即视图）', '排序状态受控/非受控双模式（内部 ref vs props 受控）', 'computed 不可变排序 + 分页切片联动', 'position:sticky 表头固定（滚动容器内吸附，需不透明背景）', '多选：Set 管理选中集，表头全选当前页 + 半选态（indeterminate）', '列宽拖动：mousedown 记录起点 → document mousemove 算 delta，全局监听 + 卸载清理；受控/非受控双模式', '作用域插槽 + formatter 双通道自定义单元格', 'colspan 空态/加载态行'],
     api: [
       { kind: 'prop', name: 'columns', type: 'TableColumn[]', default: '-', desc: '列配置（key/label/width/align/sortable/formatter）' },
       { kind: 'prop', name: 'data', type: 'any[]', default: '-', desc: '数据行' },
@@ -570,12 +571,16 @@ export const docs: ComponentDoc[] = [
       { kind: 'prop', name: 'selectable', type: 'boolean', default: 'false', desc: '开启行选择（多选）' },
       { kind: 'prop', name: 'rowKey', type: 'string', default: "'key'", desc: '行的唯一标识字段（多选必填）' },
       { kind: 'prop', name: 'selected', type: '(string\|number)[]', default: '[]', desc: '已选行 key 列表（受控）' },
+      { kind: 'prop', name: 'resizable', type: 'boolean', default: 'false', desc: '开启列宽拖动' },
+      { kind: 'prop', name: 'columnWidths', type: 'Record<string,number>', default: '{}', desc: '列宽表（受控，key → 像素宽）' },
+      { kind: 'prop', name: 'minColWidth', type: 'number', default: '60', desc: '拖拽列最小宽（px）' },
       { kind: 'prop', name: 'sortKey / sortOrder', type: 'string / SortOrder', default: '-', desc: '受控排序状态（外部控制时传）' },
       { kind: 'slot', name: 'cell', type: '{row,column,index,value}', default: '-', desc: '自定义单元格（优先于 formatter）' },
       { kind: 'event', name: 'update:sortKey', type: '(key)', default: '-', desc: '排序字段变化' },
       { kind: 'event', name: 'update:sortOrder', type: '(order)', default: '-', desc: '排序方向变化' },
       { kind: 'event', name: 'update:currentPage', type: '(page)', default: '-', desc: '页码变化' },
       { kind: 'event', name: 'update:selected', type: '(keys)', default: '-', desc: '选中集变化' },
+      { kind: 'event', name: 'update:columnWidths', type: '(widths)', default: '-', desc: '列宽表变化' },
     ],
     examples: [
       {
@@ -603,6 +608,17 @@ export const docs: ComponentDoc[] = [
   selectable
   row-key="id"
   v-model:selected="selected"
+/>`,
+      },
+      {
+        title: '列宽拖动',
+        desc: 'resizable 开启拖拽手柄，v-model:column-widths 受控列宽，min-col-width 限最小宽。',
+        code: `<UiTable
+  :columns="cols"
+  :data="rows"
+  resizable
+  v-model:column-widths="widths"
+  min-col-width="80"
 />`,
       },
       {

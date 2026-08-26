@@ -15,7 +15,7 @@ $ErrorActionPreference = 'Continue'
 # ---------- 配置 ----------
 $repo = "qtbsjy/ui-kit"
 $branch = "main"
-$message = "feat: work31 UiTable enhance - sticky header + multi-select + 8 tests (165 green)"
+$message = "feat: work32 UiTable resizable - drag col width + minColWidth + 6 tests (171 green)"
 # 排除的文件/目录
 $exclude = @(
   '.git', 'node_modules', 'dist', 'dist-ssr', 'coverage',

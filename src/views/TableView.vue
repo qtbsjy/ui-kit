@@ -61,6 +61,15 @@ function onSelected(keys: (string | number)[]) {
   selected.value = keys as number[]
 }
 
+// 列宽拖动（受控）
+const colWidths = ref<Record<string, number>>({})
+function onColWidths(w: Record<string, number>) {
+  colWidths.value = w
+}
+function resetWidths() {
+  colWidths.value = {}
+}
+
 function fmtDate(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
@@ -138,6 +147,30 @@ function fmtDate(d: Date) {
       row-key="id"
       :selected="selected"
       @update:selected="onSelected"
+    >
+      <template #cell="{ column, value, row }">
+        <UiBadge v-if="column.key === 'status'" :color="(statusMap as any)[value].color">
+          {{ (statusMap as any)[value].text }}
+        </UiBadge>
+        <span v-else-if="column.key === 'joinDate'">{{ fmtDate(value as Date) }}</span>
+        <span v-else>{{ value }}</span>
+      </template>
+    </UiTable>
+
+    <h2>列宽拖动（resizable）</h2>
+    <p class="sub">表头右侧拖拽手柄可调整列宽，受控 columnWidths + 最小宽度钳制</p>
+    <div class="controls">
+      <button @click="resetWidths">↺ 重置列宽</button>
+      <span class="hint">当前列宽: {{ Object.keys(colWidths).length ? Object.entries(colWidths).map(([k, v]) => `${k}=${v}px`).join(', ') : '自适应' }}</span>
+    </div>
+    <UiTable
+      :columns="columns"
+      :data="rows"
+      :page-size="6"
+      resizable
+      :column-widths="colWidths"
+      :min-col-width="80"
+      @update:column-widths="onColWidths"
     >
       <template #cell="{ column, value, row }">
         <UiBadge v-if="column.key === 'status'" :color="(statusMap as any)[value].color">

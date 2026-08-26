@@ -7,7 +7,8 @@
 //   4. 空态/加载态
 //   5. 表头固定 (stickyHeader: 滚动容器内 position:sticky 表头)
 //   6. 多选 (selectable: 行选择 + 全选/半选/跨页)
-import { computed, ref } from 'vue'
+//   7. 列宽拖动 (resizable: 表头拖拽改列宽)
+import { computed, ref, onBeforeUnmount } from 'vue'
 
 export type SortOrder = 'asc' | 'desc' | null
 
@@ -55,6 +56,12 @@ const props = withDefaults(
     rowKey?: string
     /** 已选行 key 列表（受控） */
     selected?: (string | number)[]
+    /** 开启列宽拖动 */
+    resizable?: boolean
+    /** 列宽表（受控，key → 像素宽） */
+    columnWidths?: Record<string, number>
+    /** 拖拽列的最小宽（px） */
+    minColWidth?: number
   }>(),
   {
     pageSize: 10,
@@ -69,6 +76,9 @@ const props = withDefaults(
     selectable: false,
     rowKey: 'key',
     selected: () => [],
+    resizable: false,
+    columnWidths: () => ({}),
+    minColWidth: 60,
   },
 )
 
@@ -80,6 +90,8 @@ const emit = defineEmits<{
   'update:currentPage': [page: number]
   /** 行选择变化 */
   'update:selected': [keys: (string | number)[]]
+  /** 列宽变化 */
+  'update:columnWidths': [widths: Record<string, number>]
 }>()
 
 // ---------- 行 key 提取 ----------
@@ -203,6 +215,70 @@ const showPagination = computed(() => props.pageSize > 0 && !props.loading && so
 // 状态单元格（加载/空态）跨列数，多选时 +1 选择列
 const colspanTotal = computed(() => props.columns.length + (props.selectable ? 1 : 0))
 
+// ---------- 列宽拖动（resizable）----------
+// 受控: 外部通过 columnWidths 控制; 非受控: 内部维护
+const internalWidths = ref<Record<string, number>>({})
+const columnWidths = computed<Record<string, number>>(() =>
+  props.columnWidths && Object.keys(props.columnWidths).length
+    ? props.columnWidths
+    : internalWidths.value,
+)
+function setColumnWidth(key: string, w: number) {
+  const next = { ...columnWidths.value, [key]: w }
+  if (props.columnWidths && Object.keys(props.columnWidths).length) {
+    emit('update:columnWidths', next)
+  } else {
+    internalWidths.value = next
+  }
+}
+// 计算某列最终宽（受控/拖动覆盖 > col.width > 自适应）
+function resolveWidth(col: TableColumn): string | undefined {
+  const dragged = columnWidths.value[col.key]
+  if (dragged) return dragged + 'px'
+  if (col.width) return typeof col.width === 'number' ? col.width + 'px' : col.width
+  return undefined
+}
+// 拖动状态
+const dragState = ref<{ colKey: string; startX: number; startWidth: number } | null>(null)
+const resizing = computed(() => dragState.value !== null)
+function startResize(e: MouseEvent, col: TableColumn) {
+  if (!props.resizable) return
+  e.preventDefault()
+  e.stopPropagation()
+  const current = columnWidths.value[col.key]
+  // 无固定宽时拿 DOM 实测当前列宽作为起点
+  let startWidth = current
+  if (!startWidth) {
+    const th = (e.currentTarget as HTMLElement).closest('th')
+    startWidth = th ? th.getBoundingClientRect().width : 120
+  }
+  dragState.value = { colKey: col.key, startX: e.clientX, startWidth }
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+  document.addEventListener('mousemove', onDragMove)
+  document.addEventListener('mouseup', onDragEnd)
+}
+function onDragMove(e: MouseEvent) {
+  if (!dragState.value) return
+  const { colKey, startX, startWidth } = dragState.value
+  const next = Math.max(props.minColWidth, Math.round(startWidth + (e.clientX - startX)))
+  setColumnWidth(colKey, next)
+}
+function onDragEnd() {
+  dragState.value = null
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  document.removeEventListener('mousemove', onDragMove)
+  document.removeEventListener('mouseup', onDragEnd)
+}
+// 组件卸载时清理全局监听
+onBeforeUnmount(() => {
+  if (dragState.value) {
+    document.removeEventListener('mousemove', onDragMove)
+    document.removeEventListener('mouseup', onDragEnd)
+  }
+})
+
 // 排序图标
 function sortIcon(order: SortOrder, active: boolean): string {
   if (!active) return '↕'
@@ -232,16 +308,24 @@ function sortIcon(order: SortOrder, active: boolean): string {
               />
             </th>
             <th
-              v-for="col in columns"
+              v-for="(col, colIndex) in columns"
               :key="col.key"
-              :class="[`is-${col.align || 'left'}`, { 'is-sortable': col.sortable }]"
-              :style="col.width ? { width: typeof col.width === 'number' ? col.width + 'px' : col.width } : undefined"
+              :class="[`is-${col.align || 'left'}`, { 'is-sortable': col.sortable, 'is-resizing': resizing && dragState?.colKey === col.key }]"
+              :style="resolveWidth(col) ? { width: resolveWidth(col) } : undefined"
               @click="toggleSort(col)"
             >
               <span class="ui-table__th-inner">
                 {{ col.label }}
                 <span v-if="col.sortable" class="ui-table__sort-icon" :class="{ 'is-active': sortKey === col.key }">{{ sortIcon(sortOrder, sortKey === col.key) }}</span>
               </span>
+              <!-- 拖拽手柄（最后一列不显示） -->
+              <span
+                v-if="resizable && colIndex < columns.length - 1"
+                class="ui-table__resizer"
+                :class="{ 'is-active': resizing && dragState?.colKey === col.key }"
+                @mousedown.stop.prevent="startResize($event, col)"
+                @click.stop
+              />
             </th>
           </tr>
         </thead>
@@ -269,6 +353,7 @@ function sortIcon(order: SortOrder, active: boolean): string {
               v-for="col in columns"
               :key="col.key"
               :class="`is-${col.align || 'left'}`"
+              :style="resolveWidth(col) ? { width: resolveWidth(col) } : undefined"
             >
               <!-- 作用域插槽优先: #cell="{ row, column, index }" -->
               <slot name="cell" :row="row" :column="col" :index="i" :value="row[col.key]">
@@ -337,7 +422,34 @@ function sortIcon(order: SortOrder, active: boolean): string {
   font-weight: 600;
   color: var(--ui-text-2);
   user-select: none;
+  position: relative;
 }
+/* 列宽拖拽手柄 */
+.ui-table__resizer {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 2;
+  touch-action: none;
+}
+.ui-table__resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 3px;
+  width: 2px;
+  height: 100%;
+  background: transparent;
+  transition: background .15s;
+}
+.ui-table__resizer:hover::after,
+.ui-table__resizer.is-active::after {
+  background: var(--ui-primary, #4f46e5);
+}
+.ui-table__resizer.is-active { cursor: col-resize; }
 .ui-table.is-dense .ui-table__table th, .ui-table.is-dense .ui-table__table td { padding: 6px 10px; font-size: 13px; }
 .ui-table__table.is-striped tbody tr:nth-child(even) { background: var(--ui-bg-soft, #fafbfc); }
 .ui-table__table tbody tr:hover { background: var(--ui-primary, #4f46e5)0f; }

@@ -220,3 +220,75 @@ describe('UiTable 多选（行选择）', () => {
     expect(wrapper.findAll('tbody tr.is-selected')).toHaveLength(2)
   })
 })
+
+describe('UiTable 列宽拖动（resizable）', () => {
+  it('resizable 渲染拖拽手柄：非最后一列有，最后一列无', () => {
+    const wrapper = mountTable({ resizable: true })
+    const headers = wrapper.findAll('thead th')
+    // 3 列，最后一列（城市）不显示手柄
+    expect(headers[0].find('.ui-table__resizer').exists()).toBe(true)
+    expect(headers[1].find('.ui-table__resizer').exists()).toBe(true)
+    expect(headers[2].find('.ui-table__resizer').exists()).toBe(false)
+  })
+
+  it('不开启 resizable 时无拖拽手柄', () => {
+    const wrapper = mountTable()
+    expect(wrapper.find('.ui-table__resizer').exists()).toBe(false)
+  })
+
+  it('拖动手柄改变列宽（非受控内部状态）', async () => {
+    const wrapper = mountTable({ resizable: true })
+    const handle = wrapper.findAll('.ui-table__resizer')[0]
+    const th = wrapper.findAll('thead th')[0]
+    // 模拟排序列起始宽
+    Object.defineProperty(th.element, 'getBoundingClientRect', { value: () => ({ width: 100 }), configurable: true })
+    // mousedown 在 x=100
+    await handle.trigger('mousedown', { clientX: 100 })
+    // document mousemove 到 x=160 → 宽 160
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 160 }))
+    await nextTick()
+    expect(th.attributes('style')).toContain('width: 160px')
+    // mouseup 结束拖拽
+    document.dispatchEvent(new MouseEvent('mouseup'))
+    await nextTick()
+    expect(wrapper.find('.ui-table__resizer.is-active').exists()).toBe(false)
+  })
+
+  it('受控 columnWidths 拖拽 emit update:columnWidths', async () => {
+    const wrapper = mountTable({ resizable: true, columnWidths: { name: 100, age: 100, city: 100 } })
+    const handle = wrapper.findAll('.ui-table__resizer')[0]
+    const th = wrapper.findAll('thead th')[0]
+    Object.defineProperty(th.element, 'getBoundingClientRect', { value: () => ({ width: 100 }), configurable: true })
+    await handle.trigger('mousedown', { clientX: 100 })
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 160 }))
+    const emitted = wrapper.emitted('update:columnWidths')!
+    expect(emitted).toBeTruthy()
+    expect((emitted[emitted.length - 1][0] as Record<string, number>).name).toBe(160)
+    document.dispatchEvent(new MouseEvent('mouseup'))
+  })
+
+  it('拖动受 minColWidth 钳制，不会缩到过窄', async () => {
+    const wrapper = mountTable({ resizable: true, minColWidth: 80, columnWidths: { name: 100, age: 100, city: 100 } })
+    const handle = wrapper.findAll('.ui-table__resizer')[0]
+    const th = wrapper.findAll('thead th')[0]
+    Object.defineProperty(th.element, 'getBoundingClientRect', { value: () => ({ width: 100 }), configurable: true })
+    await handle.trigger('mousedown', { clientX: 100 })
+    // 拖到 x=30 → 期望宽 100-70=30，被钳到 80
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 30 }))
+    const emitted = wrapper.emitted('update:columnWidths')!
+    expect((emitted[emitted.length - 1][0] as Record<string, number>).name).toBe(80)
+    document.dispatchEvent(new MouseEvent('mouseup'))
+  })
+
+  it('非受控模式拖拽更新内部列宽，th 宽度变化', async () => {
+    const wrapper = mountTable({ resizable: true })
+    const handle = wrapper.findAll('.ui-table__resizer')[0]
+    const th = wrapper.findAll('thead th')[0]
+    Object.defineProperty(th.element, 'getBoundingClientRect', { value: () => ({ width: 90 }), configurable: true })
+    await handle.trigger('mousedown', { clientX: 90 })
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: 140 }))
+    await nextTick()
+    expect(th.attributes('style')).toContain('width: 140px')
+    document.dispatchEvent(new MouseEvent('mouseup'))
+  })
+})
