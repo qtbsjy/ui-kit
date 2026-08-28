@@ -416,6 +416,47 @@ export const docs: ComponentDoc[] = [
     ],
   },
 
+  {
+    id: 'input-number',
+    name: 'UiInputNumber',
+    cn: '数字输入框',
+    category: '表单',
+    tagline: '数字步进输入，长按加速 + min/max 约束',
+    desc: [
+      '数字输入：defineModel<number|null> 支持空值，方向可控。步进按钮 ▲▼ + 长按自动加速（首次 400ms 后每隔 80ms，随步数加速至 x5）。',
+      'min/max/step 约束 + 失焦钳制：blur 时把值回弹到合法范围，无需用户手调。',
+      '直接输入数字/小数/负数，非法输入自动回退到上次合法值；Enter 提交，空/半成品置 null。',
+      'label / error 提示 / disabled / 前缀插槽，与 UiInput 风格统一。precision 控制小数位。',
+    ],
+    learned: ['defineModel<number|null> 空态设计', '长按步进加速（定时器递增加速）', 'blur 钳制 + 非法输入回退', '受控/非受控 + placeholder/disabled', 'onBeforeUnmount 清理定时器'],
+    api: [
+      { kind: 'prop', name: 'modelValue', type: 'number|null', default: 'null', desc: 'v-model: 数字或空' },
+      { kind: 'prop', name: 'label', type: 'string', default: "''", desc: '标签' },
+      { kind: 'prop', name: 'error', type: 'string', default: "''", desc: '错误提示' },
+      { kind: 'prop', name: 'placeholder', type: 'string', default: "''", desc: '占位符' },
+      { kind: 'prop', name: 'disabled', type: 'boolean', default: 'false', desc: '禁用' },
+      { kind: 'prop', name: 'min', type: 'number', default: '-Infinity', desc: '最小值' },
+      { kind: 'prop', name: 'max', type: 'number', default: 'Infinity', desc: '最大值' },
+      { kind: 'prop', name: 'step', type: 'number', default: '1', desc: '步长' },
+      { kind: 'prop', name: 'precision', type: 'number', default: '0', desc: '小数位（>0 时四舍五入）' },
+      { kind: 'prop', name: 'showControls', type: 'boolean', default: 'true', desc: '是否显示步进按钮' },
+      { kind: 'event', name: 'update:modelValue', type: 'number|null', default: '-', desc: 'v-model 更新事件' },
+      { kind: 'event', name: 'change', type: 'number|null', default: '-', desc: '失焦/提交时触发（最终值）' },
+    ],
+    examples: [
+      {
+        title: '基础数量',
+        desc: 'v-model 数字，步进按钮加减。',
+        code: `<UiInputNumber v-model="count" label="数量" :min="0" :max="99" />`,
+      },
+      {
+        title: '精确小数',
+        desc: 'precision=2 保留两位小数，步长 0.5。',
+        code: `<UiInputNumber v-model="price" label="金额" :min="0" :step="0.5" :precision="2" />`,
+      },
+    ],
+  },
+
   // ================= 反馈 =================
   {
     id: 'modal',

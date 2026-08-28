@@ -81,6 +81,11 @@ const router = createRouter({
       name: 'slider',
       component: () => import('../views/SliderView.vue'),
     },
+    {
+      path: '/input-number',
+      name: 'input-number',
+      component: () => import('../views/InputNumberView.vue'),
+    },
   ],
 })
 
