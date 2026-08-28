@@ -15,7 +15,8 @@ $ErrorActionPreference = 'Continue'
 # ---------- 配置 ----------
 $repo = "qtbsjy/ui-kit"
 $branch = "main"
-$message = "feat: work34 UiSlider - single + dual range native input + 15 tests (204 green)"
+# 读取本地最新一次提交信息作为 push 的 commit message（避免硬编码过期）
+$message = git log -1 --pretty=%s
 # 排除的文件/目录
 $exclude = @(
   '.git', 'node_modules', 'dist', 'dist-ssr', 'coverage',
