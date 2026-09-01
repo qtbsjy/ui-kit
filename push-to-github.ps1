@@ -81,8 +81,8 @@ $head = (gh api "repos/$repo/branches/$branch" 2>$null | ConvertFrom-Json).commi
 Write-Host "当前 HEAD: $head"
 $commitFile = Join-Path $tmpDir "commit.json"
 Write-JsonNoBom $commitFile @{ message = $message; tree = $treeSha; parents = @($head) }
-$commitResp = gh api "repos/$repo/git/commits" -X POST --input $commitFile 2>$null | ConvertFrom-Json
-$commitSha = $commitResp.sha
+# 用 --jq 提取 sha（纯 ASCII），避免 PS5.1 将 UTF-8 中文响应按 GBK 解码导致 ConvertFrom-Json 失败
+$commitSha = gh api "repos/$repo/git/commits" -X POST --input $commitFile --jq .sha 2>$null
 Write-Host "Commit 创建: $commitSha"
 
 # ---------- 4. 更新分支引用 ----------

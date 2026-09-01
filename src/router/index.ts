@@ -86,6 +86,11 @@ const router = createRouter({
       name: 'input-number',
       component: () => import('../views/InputNumberView.vue'),
     },
+    {
+      path: '/tree',
+      name: 'tree',
+      component: () => import('../views/TreeView.vue'),
+    },
   ],
 })
 

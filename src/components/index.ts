@@ -34,6 +34,8 @@ import UiRadio from './ui/UiRadio.vue'
 import UiRadioGroup from './ui/UiRadioGroup.vue'
 import UiSlider from './ui/UiSlider.vue'
 import UiInputNumber from './ui/UiInputNumber.vue'
+import UiTree from './ui/UiTree.vue'
+import UiTreeNode from './ui/UiTreeNode.vue'
 import type { TableColumn, SortOrder } from './ui/UiTable.vue'
 import { useFormValidator } from '../composables/useFormValidator'
 import { useTheme } from '../composables/useTheme'
@@ -72,10 +74,13 @@ export {
   UiRadioGroup,
   UiSlider,
   UiInputNumber,
+  UiTree,
+  UiTreeNode,
 }
 
 // 类型导出：让消费方 `import type { TableColumn, SortOrder } from 'ui-kit'`
 export type { TableColumn, SortOrder }
+export type { TreeNode } from './ui/treeContext'
 
 // 组合式函数导出：useFormValidator + useTheme + useUiConfig + useAsyncData + usePWA
 export { useFormValidator }
@@ -97,7 +102,7 @@ const UiKit = {
     const components = {
       UiButton, UiBadge, UiCard, UiModal, UiProgress, UiToast, UiInput, UiTextarea, UiSelect, UiSwitch,
       UiGrid, UiGridItem, UiContainer, UiSpacer, UiVirtualList, UiConfigProvider, UiSkeleton, UiInstallPwa,
-      UiTable, UiDatePicker, UiTabs, UiTabPanel, UiCheckbox, UiCheckboxGroup, UiRadio, UiRadioGroup, UiSlider, UiInputNumber,
+      UiTable, UiDatePicker, UiTabs, UiTabPanel, UiCheckbox, UiCheckboxGroup, UiRadio, UiRadioGroup, UiSlider, UiInputNumber, UiTree, UiTreeNode,
     }
     for (const [name, comp] of Object.entries(components)) {
       app.component(name, comp)

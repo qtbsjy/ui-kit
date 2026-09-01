@@ -968,6 +968,69 @@ export const docs: ComponentDoc[] = [
       },
     ],
   },
+
+  // ================= 树形（作品㊱） =================
+  {
+    id: 'tree',
+    name: 'UiTree',
+    cn: '树形控件',
+    category: '数据',
+    tagline: '递归树 + 展开/折叠 + 父子选中联动 + 懒加载 + 过滤',
+    desc: [
+      '企业级树形控件。data 数据驱动递归渲染，用于菜单 / 部门组织 / 权限树等层级结构。',
+      '选中联动：checkable 开启复选框，默认父子联动（勾选父 → 后代全选；子部分勾选 → 父半选态 indeterminate；子全选 → 父自动选）；checkStrictly 可切换严格模式（父子互不影响）。',
+      '懒加载：load 回调在展开时按需异步加载子节点，loading 态自动出现；isLeaf 可强制某节点为叶（不展开）。',
+      '过滤：filterText 关键字匹配节点，命中节点及其祖先强制展开显示，命中 label 高亮。',
+      '单选：selectable 点击节点高亮选中（互斥）并 emit select / node-click。',
+    ],
+    learned: ['递归渲染（UiTreeNode 自引用 + provide/inject 共享树上下文）', '父子选中联动：勾选祖先+后代、取消祖先链、半选态（indeterminate）计算', '受控/非受控双模式（expandedKeys / checkedKeys）', '懒加载：展开时调 load 变异 node.children + loadingKeys 管理', '过滤：匹配集 + 祖先集，命中节点及其祖先强制展开', '<script setup> 不能 export 上下文 → InjectionKey 抽独立 treeContext.ts'],
+    api: [
+      { kind: 'prop', name: 'data', type: 'TreeNode[]', default: '-', desc: '树数据（label/value/children/disabled/expanded/checked/isLeaf）' },
+      { kind: 'prop', name: 'selectable', type: 'boolean', default: 'true', desc: '节点单选（点击高亮）' },
+      { kind: 'prop', name: 'checkable', type: 'boolean', default: 'false', desc: '显示复选框（可多选）' },
+      { kind: 'prop', name: 'checkStrictly', type: 'boolean', default: 'false', desc: '严格模式：父子选中互不影响' },
+      { kind: 'prop', name: 'defaultExpandAll', type: 'boolean', default: 'false', desc: '默认全部展开' },
+      { kind: 'prop', name: 'defaultExpandedKeys', type: '(string\|number)[]', default: '[]', desc: '默认展开节点（非受控）' },
+      { kind: 'prop', name: 'expandedKeys', type: '(string\|number)[]', default: '-', desc: '受控展开集合' },
+      { kind: 'prop', name: 'checkedKeys', type: '(string\|number)[]', default: '-', desc: '受控选中集合' },
+      { kind: 'prop', name: 'filterText', type: 'string', default: "''", desc: '关键字过滤（命中高亮且祖先展开）' },
+      { kind: 'prop', name: 'showLine', type: 'boolean', default: 'false', desc: '显示树形连接线' },
+      { kind: 'prop', name: 'load', type: '(node) => Promise<TreeNode[]>', default: '-', desc: '懒加载回调（展开时按需加载子节点）' },
+      { kind: 'event', name: 'update:expandedKeys', type: '(keys)', default: '-', desc: '展开集合变化（受控）' },
+      { kind: 'event', name: 'update:checkedKeys', type: '(keys)', default: '-', desc: '选中集合变化（受控）' },
+      { kind: 'event', name: 'select', type: '(node, selected)', default: '-', desc: '单选变化' },
+      { kind: 'event', name: 'check', type: '(keys, node, checked)', default: '-', desc: '勾选变化' },
+      { kind: 'event', name: 'node-click', type: '(node)', default: '-', desc: '点击节点' },
+      { kind: 'event', name: 'node-expand / node-collapse', type: '(node)', default: '-', desc: '展开 / 折叠' },
+    ],
+    examples: [
+      {
+        title: '基础树 + 默认展开',
+        desc: '数据驱动渲染，defaultExpandAll 全部展开。',
+        code: `<UiTree :data="tree" default-expand-all />`,
+      },
+      {
+        title: '父子选中联动',
+        desc: 'checkable 开启复选框；勾选父节点自动全选后代，子部分勾选时父半选。',
+        code: `<UiTree :data="tree" checkable default-expand-all />`,
+      },
+      {
+        title: '严格模式',
+        desc: 'checkStrictly 让父子勾选互不影响，适合权限点独立管理的场景。',
+        code: `<UiTree :data="tree" checkable check-strictly />`,
+      },
+      {
+        title: '懒加载',
+        desc: 'load 在展开时异步加载子节点；isLeaf 节点不显示展开箭头。',
+        code: `<UiTree :data="roots" :load="loadChildren" />`,
+      },
+      {
+        title: '过滤',
+        desc: 'filterText 输入关键字，命中节点及其祖先强制展开显示并高亮。',
+        code: `<UiTree :data="tree" :filter-text="keyword" />`,
+      },
+    ],
+  },
 ]
 
 // ---------- 分类索引 ----------
