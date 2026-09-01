@@ -16,7 +16,17 @@ $ErrorActionPreference = 'Continue'
 $repo = "qtbsjy/ui-kit"
 $branch = "main"
 # 读取本地最新一次提交信息作为 push 的 commit message（避免硬编码过期）
-$message = git log -1 --pretty=%s
+# 用 ProcessStartInfo 直接按 UTF-8 解码 git 输出，避免 PS5.1 管道把中文按 GBK 解成乱码
+$psi = New-Object System.Diagnostics.ProcessStartInfo
+$psi.FileName = "git"
+$psi.Arguments = "log -1 --pretty=%s"
+$psi.RedirectStandardOutput = $true
+$psi.UseShellExecute = $false
+$psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+$psi.CreateNoWindow = $true
+$p = [System.Diagnostics.Process]::Start($psi)
+$message = $p.StandardOutput.ReadToEnd().Trim()
+$p.WaitForExit()
 # 排除的文件/目录
 $exclude = @(
   '.git', 'node_modules', 'dist', 'dist-ssr', 'coverage',
@@ -59,9 +69,10 @@ foreach ($f in $allFiles) {
   $b64 = [Convert]::ToBase64String($bytes)
   $bodyFile = Join-Path $tmpDir "blob.json"
   Write-JsonNoBom $bodyFile @{ content = $b64; encoding = 'base64' }
-  $resp = gh api "repos/$repo/git/blobs" -X POST --input $bodyFile 2>$null | ConvertFrom-Json
-  if ($resp.sha) {
-    [void]$blobs.Add(@{ path = $rel; sha = $resp.sha; mode = '100644'; type = 'blob' })
+  # 用 --jq 提取 sha（响应纯 ASCII，避免 PS5.1 把 UTF-8 中文按 GBK 解码崩 ConvertFrom-Json）
+  $resp = gh api "repos/$repo/git/blobs" -X POST --input $bodyFile --jq .sha 2>$null
+  if ($resp) {
+    [void]$blobs.Add(@{ path = $rel; sha = $resp; mode = '100644'; type = 'blob' })
   } else {
     Write-Host "  [FAIL] $rel"
   }
@@ -72,12 +83,11 @@ Write-Host "  blobs 创建完成: $($blobs.Count) 个"
 if ($blobs.Count -eq 0) { Write-Host "错误: 无 blob, 终止"; exit 1 }
 $treeFile = Join-Path $tmpDir "tree.json"
 Write-JsonNoBom $treeFile @{ tree = @($blobs) }
-$treeResp = gh api "repos/$repo/git/trees" -X POST --input $treeFile 2>$null | ConvertFrom-Json
-$treeSha = $treeResp.sha
+$treeSha = gh api "repos/$repo/git/trees" -X POST --input $treeFile --jq .sha 2>$null
 Write-Host "Tree 创建: $treeSha"
 
 # ---------- 3. 建 commit(引用当前 main HEAD 为 parent) ----------
-$head = (gh api "repos/$repo/branches/$branch" 2>$null | ConvertFrom-Json).commit.sha
+$head = gh api "repos/$repo/branches/$branch" --jq .commit.sha 2>$null
 Write-Host "当前 HEAD: $head"
 $commitFile = Join-Path $tmpDir "commit.json"
 Write-JsonNoBom $commitFile @{ message = $message; tree = $treeSha; parents = @($head) }
