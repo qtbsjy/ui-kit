@@ -3,6 +3,7 @@
 // 根据组件 id 渲染对应组件的真实可交互演示（非静态截图）。
 // 这是文档站的"灵魂"：每个组件都能当场试玩。
 import { ref, reactive, getCurrentInstance } from 'vue'
+import type { TreeNode } from '../ui/treeContext'
 import { useFormValidator } from '../../composables/useFormValidator'
 import { z } from 'zod'
 
@@ -43,6 +44,50 @@ function submitForm() {
 // ---------- 开关演示 ----------
 const notifOn = ref(true)
 const darkPref = ref(false)
+
+// ---------- 树演示（作品㊱ / ㊲） ----------
+const makeTree = (): TreeNode[] => [
+  {
+    label: '总部',
+    value: 'hq',
+    children: [
+      {
+        label: '研发部',
+        value: 'dev',
+        children: [
+          { label: '前端组', value: 'fe' },
+          { label: '后端组', value: 'be' },
+          { label: '测试组', value: 'qa' },
+        ],
+      },
+      { label: '市场部', value: 'mkt' },
+      { label: '人事部', value: 'hr', children: [{ label: '招聘组', value: 'recruit' }] },
+    ],
+  },
+  { label: '分公司', value: 'branch', children: [{ label: '上海分部', value: 'sh' }] },
+]
+const treeData = ref<TreeNode[]>(makeTree())
+const treeDraggable = ref(false)
+const treeKeyboard = ref(false)
+const treeKeyword = ref('')
+const treeChecked = ref<(string | number)[]>([])
+const treeLastAction = ref('—')
+function onTreeDrop(e: { data: TreeNode[]; dragKey: string | number; dropKey: string | number; position: string }) {
+  treeData.value = e.data
+  const posText = { inner: '内部', before: '之前', after: '之后' }[e.position] || e.position
+  treeLastAction.value = `拖拽 ${e.dragKey} → ${e.dropKey}(${posText})`
+  toast('success', '拖拽成功，树结构已更新')
+}
+function onTreeCheck(keys: (string | number)[]) {
+  treeChecked.value = keys
+  treeLastAction.value = `勾选 ${keys.length} 项`
+}
+function resetTree() {
+  treeData.value = makeTree()
+  treeChecked.value = []
+  treeKeyword.value = ''
+  treeLastAction.value = '已重置'
+}
 
 // ---------- 虚拟列表演示 ----------
 const virtualItems = Array.from({ length: 5000 }, (_, i) => ({
@@ -218,6 +263,35 @@ const virtualItems = Array.from({ length: 5000 }, (_, i) => ({
     </div>
   </div>
 
+  <!-- ============ 树 ============ -->
+  <div v-else-if="id === 'tree'" class="demo-col">
+    <div class="row" style="gap:16px">
+      <UiSwitch v-model="treeDraggable" label="拖拽排序" active-text="开" inactive-text="关" />
+      <UiSwitch v-model="treeKeyboard" label="键盘导航" active-text="开" inactive-text="关" />
+    </div>
+    <UiInput v-model="treeKeyword" placeholder="输入关键字过滤节点…" />
+    <div class="tree-box">
+      <UiTree
+        :data="treeData"
+        checkable
+        :draggable="treeDraggable"
+        :keyboard-nav="treeKeyboard"
+        :filter-text="treeKeyword"
+        default-expand-all
+        @drop="onTreeDrop"
+        @check="onTreeCheck"
+      />
+    </div>
+    <p class="hint">
+      已选 {{ treeChecked.length }} 项 · 最近操作：{{ treeLastAction }}
+      <template v-if="treeDraggable">· 拖到节点上/下沿 = 同级插入，拖到中部 = 成为子节点</template>
+      <template v-if="treeKeyboard">· Tab 进入后使用 ↑↓←→ / Home / End / Enter</template>
+    </p>
+    <div class="row">
+      <UiButton size="sm" variant="secondary" @click="resetTree">重置树</UiButton>
+    </div>
+  </div>
+
   <!-- ============ 虚拟列表 ============ -->
   <div v-else-if="id === 'virtual'" class="demo-col">
     <UiVirtualList
@@ -250,6 +324,10 @@ const virtualItems = Array.from({ length: 5000 }, (_, i) => ({
 .vidx { color: var(--ui-text-3); font-weight: 600; flex-shrink: 0; }
 .vtext { color: var(--ui-text-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 code { background: var(--ui-hover); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+.tree-box {
+  border: 1px solid var(--ui-border); border-radius: 10px; padding: 8px;
+  max-height: 320px; overflow: auto; background: var(--ui-panel);
+}
 .fade-enter-active, .fade-leave-active { transition: opacity .3s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

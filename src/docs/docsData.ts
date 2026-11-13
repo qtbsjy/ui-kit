@@ -975,7 +975,7 @@ export const docs: ComponentDoc[] = [
     name: 'UiTree',
     cn: '树形控件',
     category: '数据',
-    tagline: '递归树 + 展开/折叠 + 父子选中联动 + 懒加载 + 过滤',
+    tagline: '递归树 + 父子选中联动 + 懒加载 + 过滤 + 键盘导航 + 拖拽排序',
     desc: [
       '企业级树形控件。data 数据驱动递归渲染，用于菜单 / 部门组织 / 权限树等层级结构。',
       '选中联动：checkable 开启复选框，默认父子联动（勾选父 → 后代全选；子部分勾选 → 父半选态 indeterminate；子全选 → 父自动选）；checkStrictly 可切换严格模式（父子互不影响）。',
@@ -1001,7 +1001,14 @@ export const docs: ComponentDoc[] = [
       { kind: 'event', name: 'select', type: '(node, selected)', default: '-', desc: '单选变化' },
       { kind: 'event', name: 'check', type: '(keys, node, checked)', default: '-', desc: '勾选变化' },
       { kind: 'event', name: 'node-click', type: '(node)', default: '-', desc: '点击节点' },
+      { kind: 'prop', name: 'clickToExpand', type: 'boolean', default: 'false', desc: '㊲ 点击节点文本即展开/折叠' },
+      { kind: 'prop', name: 'keyboardNav', type: 'boolean', default: 'false', desc: '㊲ 开启键盘导航（roving tabindex）' },
+      { kind: 'prop', name: 'draggable', type: 'boolean', default: 'false', desc: '㊲ 开启拖拽排序' },
+      { kind: 'prop', name: 'allowDrop', type: '(drag, drop, position) => boolean', default: '-', desc: '㊲ 自定义放置规则（返回 false 拒绝）' },
+      { kind: 'prop', name: 'expandOnDrop', type: 'boolean', default: 'true', desc: '㊲ 拖放后自动展开被拖节点' },
       { kind: 'event', name: 'node-expand / node-collapse', type: '(node)', default: '-', desc: '展开 / 折叠' },
+      { kind: 'event', name: 'drop', type: '{ dragKey, dropKey, position, data }', default: '-', desc: '㊲ 拖拽完成，data 为变换后的新树' },
+      { kind: 'event', name: 'keydown', type: '(key, node)', default: '-', desc: '㊲ 键盘操作钩子' },
     ],
     examples: [
       {
@@ -1028,6 +1035,16 @@ export const docs: ComponentDoc[] = [
         title: '过滤',
         desc: 'filterText 输入关键字，命中节点及其祖先强制展开显示并高亮。',
         code: `<UiTree :data="tree" :filter-text="keyword" />`,
+      },
+      {
+        title: '键盘导航',
+        desc: 'keyboardNav：Tab 进入一次，↑↓ 移动、←→ 折叠/展开、Home/End 首尾、Enter 勾选',
+        code: `<UiTree :data="tree" keyboard-nav checkable default-expand-all />`,
+      },
+      {
+        title: '拖拽排序',
+        desc: 'draggable：拖到节点上/下沿 = 同级插入，拖到中部 = 成为子节点；drop 事件给出新树',
+        code: `<UiTree :data="tree" draggable @drop="(e) => (tree = e.data)" />`,
       },
     ],
   },
