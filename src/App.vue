@@ -29,6 +29,8 @@ function onToggle() {
         <RouterLink to="/checkbox">☑️ 复选/单选</RouterLink>
         <RouterLink to="/slider">🎚️ 滑条</RouterLink>
         <RouterLink to="/input-number">🔢 数字输入</RouterLink>
+        <RouterLink to="/tree">🌲 树形控件</RouterLink>
+        <RouterLink to="/steps">🧭 步骤条</RouterLink>
       </div>
       <button class="theme-toggle" :title="isDark ? '切到浅色' : '切到深色'" @click="onToggle">
         {{ isDark ? '☀️' : '🌙' }}

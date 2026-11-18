@@ -1092,6 +1092,81 @@ export const docs: ComponentDoc[] = [
       },
     ],
   },
+// ================= 步骤条（作品㊴） =================
+  {
+    id: 'steps',
+    name: 'UiSteps',
+    cn: '步骤条',
+    category: '数据',
+    tagline: '流程引导 + 状态机 + 横向/纵向 + 可点击跳转 + 错误态',
+    desc: [
+      '引导用户按流程完成任务。传入 items 数组即自动渲染，当前步骤之前的自动判定为「已完成」，当前步骤「进行中」，之后「等待」。',
+      '方向：direction="horizontal"（默认）/ "vertical"，纵向适合时间线式的长流程。',
+      '状态覆盖：item.status 可强制指定某步为 wait / process / finish / error；error 优先级最高（圆点变红显示 ✕，连接线也变错误色）。',
+      '可点击：clickable 开启后点击步骤 emit change；配合 v-model:active 可实现「点哪跳哪」；item.disabled 让某步不可点。',
+      '样式：size="small" 缩小尺寸、simple 隐藏描述、showCheck 控制完成态是否显示对勾、finishColor / errorColor 覆盖主题色、item.icon 自定义图标、item.extra 显示附注（如时间戳）。',
+    ],
+    learned: [
+      '状态机推算：状态由 active 索引 + item.status 两层决定，显式 error 短路一切',
+      '连接线颜色由「左侧步骤是否 finish/error」决定，不用单独维护',
+      '横向用绝对定位连接线（left: 圆点宽+8px / right: 8px），避开心 gap 计算',
+      '纵向用独立 DOM 结构（竖线绝对定位在圆点下方），不硬套横向 flex',
+      '受控/非受控双模式：active 传了就是受控（点击只 emit），不传用 defaultActive 内部自管',
+      '<script setup> 不能运行时 export interface → 类型只在组件内部可见，文档里描述用法',
+    ],
+    api: [
+      { kind: 'prop', name: 'items', type: 'StepItem[]', default: '-', desc: '步骤数据（title/description/icon/status/disabled/extra）' },
+      { kind: 'prop', name: 'active', type: 'number', default: '-', desc: '当前步骤索引（0 起，受控）' },
+      { kind: 'prop', name: 'defaultActive', type: 'number', default: '0', desc: '非受控的初始步骤' },
+      { kind: 'prop', name: 'direction', type: "'horizontal' \\| 'vertical'", default: "'horizontal'", desc: '方向' },
+      { kind: 'prop', name: 'clickable', type: 'boolean', default: 'false', desc: '步骤可点击跳转' },
+      { kind: 'prop', name: 'simple', type: 'boolean', default: 'false', desc: '简洁模式（隐藏描述）' },
+      { kind: 'prop', name: 'size', type: "'default' \\| 'small'", default: "'default'", desc: '尺寸' },
+      { kind: 'prop', name: 'showCheck', type: 'boolean', default: 'true', desc: '完成步骤显示 ✓ 而不是序号' },
+      { kind: 'prop', name: 'finishColor', type: 'string', default: '主题主色', desc: '已完成 / 进行中的主色' },
+      { kind: 'prop', name: 'errorColor', type: 'string', default: '--ui-danger', desc: '错误步骤的颜色' },
+      { kind: 'event', name: 'change', type: '(index, item)', default: '-', desc: '点击步骤（clickable 时）' },
+      { kind: 'event', name: 'update:active', type: '(index)', default: '-', desc: '受控更新（配合 v-model:active）' },
+    ],
+    examples: [
+      {
+        title: '基础用法',
+        desc: '受控 active，配合「上一步 / 下一步」按钮推进流程。',
+        code: Array.from([
+          '<UiSteps :items="items" :active="active" />',
+          '<UiButton :disabled="active === 0" @click="active--">上一步</UiButton>',
+          '<UiButton @click="active++">下一步</UiButton>',
+        ]).join('\n'),
+      },
+      {
+        title: '可点击跳转',
+        desc: 'clickable + v-model:active：点哪跳哪，disabled 的步骤不可点。',
+        code: '<UiSteps :items="items" v-model:active="active" clickable />',
+      },
+      {
+        title: '错误状态',
+        desc: "某步 item.status = 'error' 时圆点变红显示 ✕，连接线同步变错误色。",
+        code: Array.from([
+          'const items = [',
+          "  { title: '提交申请' },",
+          "  { title: '资料审核', status: 'error', description: '营业执照已过期' },",
+          "  { title: '缴纳费用' },",
+          ']',
+          '<UiSteps :items="items" :active="1" />',
+        ]).join('\n'),
+      },
+      {
+        title: '竖向 + 自定义图标',
+        desc: 'direction="vertical" 适合时间线式长流程；icon 自定义 emoji，extra 显示时间戳。',
+        code: '<UiSteps :items="items" :active="2" direction="vertical" />',
+      },
+      {
+        title: '简洁 / 小尺寸 / 自定义颜色',
+        desc: 'simple 隐藏描述，size="small" 缩小圆点，finish-color 覆盖主题色。',
+        code: '<UiSteps :items="items" :active="2" simple size="small" finish-color="#10b981" />',
+      },
+    ],
+  },
 ]
 
 // ---------- 分类索引 ----------

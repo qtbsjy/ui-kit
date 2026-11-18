@@ -91,6 +91,11 @@ const router = createRouter({
       name: 'tree',
       component: () => import('../views/TreeView.vue'),
     },
+    {
+      path: '/steps',
+      name: 'steps',
+      component: () => import('../views/StepsView.vue'),
+    },
   ],
 })
 

@@ -36,6 +36,7 @@ import UiSlider from './ui/UiSlider.vue'
 import UiInputNumber from './ui/UiInputNumber.vue'
 import UiTree from './ui/UiTree.vue'
 import UiTreeNode from './ui/UiTreeNode.vue'
+import UiSteps from './ui/UiSteps.vue'
 import type { TableColumn, SortOrder } from './ui/UiTable.vue'
 import { useFormValidator } from '../composables/useFormValidator'
 import { useTheme } from '../composables/useTheme'
@@ -76,6 +77,7 @@ export {
   UiInputNumber,
   UiTree,
   UiTreeNode,
+  UiSteps,
 }
 
 // 类型导出：让消费方 `import type { TableColumn, SortOrder } from 'ui-kit'`
@@ -102,7 +104,7 @@ const UiKit = {
     const components = {
       UiButton, UiBadge, UiCard, UiModal, UiProgress, UiToast, UiInput, UiTextarea, UiSelect, UiSwitch,
       UiGrid, UiGridItem, UiContainer, UiSpacer, UiVirtualList, UiConfigProvider, UiSkeleton, UiInstallPwa,
-      UiTable, UiDatePicker, UiTabs, UiTabPanel, UiCheckbox, UiCheckboxGroup, UiRadio, UiRadioGroup, UiSlider, UiInputNumber, UiTree, UiTreeNode,
+      UiTable, UiDatePicker, UiTabs, UiTabPanel, UiCheckbox, UiCheckboxGroup, UiRadio, UiRadioGroup, UiSlider, UiInputNumber, UiTree, UiTreeNode, UiSteps,
     }
     for (const [name, comp] of Object.entries(components)) {
       app.component(name, comp)
