@@ -975,15 +975,16 @@ export const docs: ComponentDoc[] = [
     name: 'UiTree',
     cn: '树形控件',
     category: '数据',
-    tagline: '递归树 + 父子选中联动 + 懒加载 + 过滤 + 键盘导航 + 拖拽排序',
+    tagline: '递归树 + 父子选中联动 + 懒加载 + 过滤 + 键盘导航 + 拖拽排序 + 节点编辑',
     desc: [
       '企业级树形控件。data 数据驱动递归渲染，用于菜单 / 部门组织 / 权限树等层级结构。',
       '选中联动：checkable 开启复选框，默认父子联动（勾选父 → 后代全选；子部分勾选 → 父半选态 indeterminate；子全选 → 父自动选）；checkStrictly 可切换严格模式（父子互不影响）。',
       '懒加载：load 回调在展开时按需异步加载子节点，loading 态自动出现；isLeaf 可强制某节点为叶（不展开）。',
       '过滤：filterText 关键字匹配节点，命中节点及其祖先强制展开显示，命中 label 高亮。',
       '单选：selectable 点击节点高亮选中（互斥）并 emit select / node-click。',
+      '节点编辑（㊳）：editable 开启双击重命名内联输入框（Enter 提交 / Esc 取消 / blur 自动保存）；contextMenu 开启右键菜单（新增子节点 / 重命名 / 删除），菜单项也可用 menuActions 完全自定义；beforeDelete 可做删除前确认。',
     ],
-    learned: ['递归渲染（UiTreeNode 自引用 + provide/inject 共享树上下文）', '父子选中联动：勾选祖先+后代、取消祖先链、半选态（indeterminate）计算', '受控/非受控双模式（expandedKeys / checkedKeys）', '懒加载：展开时调 load 变异 node.children + loadingKeys 管理', '过滤：匹配集 + 祖先集，命中节点及其祖先强制展开', '<script setup> 不能 export 上下文 → InjectionKey 抽独立 treeContext.ts'],
+    learned: ['递归渲染（UiTreeNode 自引用 + provide/inject 共享树上下文）', '父子选中联动：勾选祖先+后代、取消祖先链、半选态（indeterminate）计算', '受控/非受控双模式（expandedKeys / checkedKeys）', '懒加载：展开时调 load 变异 node.children + loadingKeys 管理', '过滤：匹配集 + 祖先集，命中节点及其祖先强制展开', '<script setup> 不能 export 上下文 → InjectionKey 抽独立 treeContext.ts', '㊳ 编辑态用临时 key（__new_N__）先占位，用户输入后原地改名，父级可自行替换为真实 ID', '㊳ 内联编辑的 Enter/Esc 必须 stopPropagation，否则冒泡到树的键盘导航', '㊳ 右键菜单 Teleport 到 body + capture 阶段监听 mousedown 关闭（否则菜单自身点击先关掉）'],
     api: [
       { kind: 'prop', name: 'data', type: 'TreeNode[]', default: '-', desc: '树数据（label/value/children/disabled/expanded/checked/isLeaf）' },
       { kind: 'prop', name: 'selectable', type: 'boolean', default: 'true', desc: '节点单选（点击高亮）' },
@@ -1009,6 +1010,18 @@ export const docs: ComponentDoc[] = [
       { kind: 'event', name: 'node-expand / node-collapse', type: '(node)', default: '-', desc: '展开 / 折叠' },
       { kind: 'event', name: 'drop', type: '{ dragKey, dropKey, position, data }', default: '-', desc: '㊲ 拖拽完成，data 为变换后的新树' },
       { kind: 'event', name: 'keydown', type: '(key, node)', default: '-', desc: '㊲ 键盘操作钩子' },
+      { kind: 'prop', name: 'editable', type: 'boolean', default: 'false', desc: '㊳ 开启节点编辑（双击重命名 / 右键增删）' },
+      { kind: 'prop', name: 'contextMenu', type: 'boolean', default: 'false', desc: '㊳ 开启右键菜单' },
+      { kind: 'prop', name: 'menuActions', type: 'TreeMenuAction[]', default: '内置三项', desc: '㊳ 自定义菜单项（配了则只 emit 不执行内置行为）' },
+      { kind: 'prop', name: 'defaultNewLabel', type: 'string', default: '新节点', desc: '㊳ 新增节点的占位 label' },
+      { kind: 'prop', name: 'maxLabelLength', type: 'number', default: '50', desc: '㊳ 节点名称最大长度（超出截断）' },
+      { kind: 'prop', name: 'beforeDelete', type: '(node) => boolean \\| Promise<boolean>', default: '-', desc: '㊳ 删除前钩子，返回 false 阻止删除' },
+      { kind: 'event', name: 'update:data', type: '(data)', default: '-', desc: '㊳ 编辑/新增/删除后的新树（配合 v-model:data）' },
+      { kind: 'event', name: 'rename', type: '(node, label, data)', default: '-', desc: '㊳ 重命名完成' },
+      { kind: 'event', name: 'add', type: '(node, parentKey, data)', default: '-', desc: '㊳ 新增节点完成（node.value 为临时 key，可自行替换）' },
+      { kind: 'event', name: 'remove', type: '(node, data)', default: '-', desc: '㊳ 删除节点完成' },
+      { kind: 'event', name: 'menu-action', type: '(action, node)', default: '-', desc: '㊳ 右键菜单项点击（自定义行为时用）' },
+      { kind: 'slot', name: 'default', type: '-', default: '-', desc: '默认插槽（本组件数据驱动，一般不用）' },
     ],
     examples: [
       {
@@ -1045,6 +1058,37 @@ export const docs: ComponentDoc[] = [
         title: '拖拽排序',
         desc: 'draggable：拖到节点上/下沿 = 同级插入，拖到中部 = 成为子节点；drop 事件给出新树',
         code: `<UiTree :data="tree" draggable @drop="(e) => (tree = e.data)" />`,
+      },
+      {
+        title: '节点编辑（双击重命名）',
+        desc: 'editable：双击节点文本进入内联输入框，Enter 提交、Esc 取消、失焦自动保存；v-model:data 接住新树。',
+        code: `<UiTree v-model:data="tree" editable default-expand-all />`,
+      },
+      {
+        title: '右键菜单 + 增删',
+        desc: 'contextMenu：右键节点弹出菜单（新增子节点 / 重命名 / 删除）；beforeDelete 可拦截删除。',
+        code: [
+          '<UiTree',
+          '  v-model:data="tree"' ,
+          '  editable',
+          '  context-menu',
+          '  :before-delete="(n) => confirm(`确定删除 ${n.label}？`)"',
+          '  default-expand-all',
+          '/>',
+        ].join('\n'),
+      },
+      {
+        title: '自定义菜单项',
+        desc: 'menuActions 完全接管菜单，点击只 emit menu-action，业务逻辑自己写。',
+        code: `<UiTree
+  v-model:data="tree"
+  context-menu
+  :menu-actions="[
+    { key: 'copy', label: '复制' },
+    { key: 'paste', label: '粘贴', disabled: true },
+  ]"
+  @menu-action="(action, node) => handle(action, node)"
+/>`,
       },
     ],
   },

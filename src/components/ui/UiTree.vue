@@ -10,8 +10,12 @@
 //   6. 键盘导航：roving tabindex + 方向键/Home/End/展开折叠/勾选 全套无障碍
 //   7. 拖拽排序：HTML5 DnD + 放置位置判定（内部/前/后）+ 不可变树变换
 //   8. 半选态用 O(n) 后序遍历替代 O(n²) 逐节点扫描
+//   —— ㊳ 新增 ——
+//   9. 节点内联编辑：重命名 / 新增子节点 / 新增根节点（Enter 提交 / Esc 取消 / blur 提交）
+//  10. 右键菜单：菜单定位 + 点击外部关闭 + 菜单项可配置
+//  11. 删除节点（含确认钩子 beforeDelete）
 
-import { computed, nextTick, onMounted, provide, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue'
 import UiTreeNode from './UiTreeNode.vue'
 import type { DropPosition, NodeClickArea, TreeNode, TreeContext } from './treeContext'
 import {
@@ -20,8 +24,13 @@ import {
   findNode,
   flattenVisible,
   getDescendants,
+  insertNode,
+  makeTempKey,
   moveNode,
+  renameNode,
 } from './treeContext'
+import type { TreeEditContext, TreeEditState, TreeMenuAction, TreeMenuState } from './treeEditContext'
+import { TreeEditKey } from './treeEditContext'
 
 const props = withDefaults(
   defineProps<{
@@ -46,6 +55,18 @@ const props = withDefaults(
     allowDrop?: (dragNode: TreeNode, dropNode: TreeNode, position: DropPosition) => boolean
     /** ㊲：拖拽后被拖节点的初始展开态（默认展开，方便看到拖入的子节点） */
     expandOnDrop?: boolean
+    /** ㊳：开启节点编辑（重命名 / 新增 / 删除 的总开关） */
+    editable?: boolean
+    /** ㊳：开启右键菜单 */
+    contextMenu?: boolean
+    /** ㊳：自定义右键菜单项（不传则用内置默认项） */
+    menuActions?: TreeMenuAction[]
+    /** ㊳：新增节点的 label 默认值 */
+    defaultNewLabel?: string
+    /** ㊳：标签最大长度 */
+    maxLabelLength?: number
+    /** ㊳：删除前钩子，返回 false 阻止删除 */
+    beforeDelete?: (node: TreeNode) => boolean | Promise<boolean>
   }>(),
   {
     selectable: true,
@@ -63,6 +84,12 @@ const props = withDefaults(
     draggable: false,
     allowDrop: undefined,
     expandOnDrop: true,
+    editable: false,
+    contextMenu: false,
+    menuActions: undefined,
+    defaultNewLabel: '新节点',
+    maxLabelLength: 50,
+    beforeDelete: undefined,
   },
 )
 
@@ -78,6 +105,16 @@ const emit = defineEmits<{
   'drop': [payload: { dragKey: string | number; dropKey: string | number; position: DropPosition; data: TreeNode[] }]
   /** ㊲：键盘操作钩子（便于埋点/自定义） */
   'keydown': [key: string, node: TreeNode | null]
+  /** ㊳：整棵树数据变更（编辑/新增/删除后给出新树） */
+  'update:data': [data: TreeNode[]]
+  /** ㊳：节点重命名完成 */
+  'rename': [node: TreeNode, label: string, data: TreeNode[]]
+  /** ㊳：新增节点完成（含临时 key，父级可采用或替换） */
+  'add': [node: TreeNode, parentKey: string | number | null, data: TreeNode[]]
+  /** ㊳：删除节点完成 */
+  'remove': [node: TreeNode, data: TreeNode[]]
+  /** ㊳：右键菜单项点击（自定义行为时用） */
+  'menu-action': [action: TreeMenuAction, node: TreeNode | null]
 }>()
 
 // ---------- 节点扁平化 ----------
@@ -574,6 +611,268 @@ function onTreeKeydown(e: KeyboardEvent) {
   }
 }
 
+// ---------- ㊳：节点编辑（重命名 / 新增 / 删除） ----------
+// 设计要点：
+//   1. 非受控编辑：内部维护一份 workingTree 副本？—— 不，过于复杂。
+//      本组件采用「父级持有真数据」策略：编辑完成 emit update:data 新树，父级 v-model:data 即可。
+//      但为了让非受控也能直接看到效果，内部维护 edittedTree：优先用 props.data，
+//      一旦本地编辑过就用本地树（标记 localDirty），props.data 引用变化时重置。
+//   2. 内联编辑状态：editing = { key, draft, isNew, parentKey }，UiTreeNode 里渲染 input。
+//   3. 新建节点先用临时 key（__new_N__）插入，用户输入后原地改 label；
+//      父级拿到 add 事件后可用自己的 ID 策略替换。
+const localDirty = ref(false)
+const localTree = ref<TreeNode[]>([])
+
+/** 实际渲染用的树：本地编辑过 → localTree，否则 props.data */
+const workingTree = computed<TreeNode[]>(() => (localDirty.value ? localTree.value : props.data))
+
+watch(
+  () => props.data,
+  (val) => {
+    // 父级传入新树（或 v-model:data 回写）→ 以父级为准
+    if (val === localTree.value) return
+    localDirty.value = false
+    localTree.value = val
+  },
+  { immediate: true },
+)
+
+/** 提交一棵新树：本地生效 + emit 给父级 */
+function applyTree(next: TreeNode[]) {
+  localTree.value = next
+  localDirty.value = true
+  emit('update:data', next)
+}
+
+const editing = ref<TreeEditState | null>(null)
+
+function isEditingKey(key: string | number) {
+  return editing.value?.key === key
+}
+
+function startRename(node: TreeNode) {
+  if (!props.editable || node.disabled) return
+  editing.value = { key: node.value, draft: node.label, isNew: false, parentKey: null }
+  closeMenu()
+}
+
+function startAddChild(node: TreeNode) {
+  if (!props.editable || node.disabled) return
+  closeMenu()
+  const parentKey = node.value
+  // 新增前先展开父节点，否则看不到输入框
+  const exp = new Set(expandedKeys.value)
+  exp.add(parentKey)
+  if (!isControlledExpand.value) internalExpanded.value = exp
+  else emit('update:expandedKeys', [...exp])
+
+  const tempKey = makeTempKey(nodeMap.value)
+  const newNode: TreeNode = { label: props.defaultNewLabel, value: tempKey, __isNew: true }
+  applyTree(insertNode(workingTree.value, parentKey, newNode))
+  editing.value = { key: tempKey, draft: '', isNew: true, parentKey }
+  // 等 DOM 更新后把焦点交给输入框（UiTreeNode 自身 onMounted 也会 focus）
+  nextTick(() => {
+    const el = nodeEls.get(tempKey)?.querySelector('input.ui-tree__edit-input') as HTMLInputElement | null
+    el?.focus()
+    el?.select()
+  })
+}
+
+function startAddRoot() {
+  if (!props.editable) return
+  closeMenu()
+  const tempKey = makeTempKey(nodeMap.value)
+  const newNode: TreeNode = { label: props.defaultNewLabel, value: tempKey, __isNew: true }
+  applyTree(insertNode(workingTree.value, null, newNode))
+  editing.value = { key: tempKey, draft: '', isNew: true, parentKey: null }
+  nextTick(() => {
+    const el = nodeEls.get(tempKey)?.querySelector('input.ui-tree__edit-input') as HTMLInputElement | null
+    el?.focus()
+    el?.select()
+  })
+}
+
+function findInWorking(key: string | number): TreeNode | null {
+  return findNode(workingTree.value, key)?.node ?? null
+}
+
+function commitEdit() {
+  const st = editing.value
+  if (!st) return
+  const editKeyFinal = st.key as string | number
+  const editParentKey = st.parentKey
+  const editIsNew = st.isNew
+  const label = st.draft.trim().slice(0, props.maxLabelLength)
+  editing.value = null
+  const node = findInWorking(editKeyFinal)
+  if (!node) return
+
+  // 空文本：新建 → 直接丢弃；重命名 → 视为取消
+  if (!label) {
+    if (editIsNew) {
+      if (findNode(workingTree.value, editKeyFinal)) applyTree(cloneWorkingRemoved(editKeyFinal))
+    }
+    return
+  }
+
+  const next = renameNode(workingTree.value, editKeyFinal, label)
+  applyTree(next)
+  const finalNode = findNode(next, editKeyFinal)?.node ?? node
+  if (editIsNew) {
+    emit('add', finalNode, editParentKey, next)
+  } else {
+    emit('rename', finalNode, label, next)
+  }
+  emit('update:data', next)
+}
+
+function cloneWorking(): TreeNode[] {
+  return workingTree.value.map(function walk(n): TreeNode {
+    return { ...n, children: n.children ? n.children.map(walk) : n.children }
+  })
+}
+
+function cloneWorkingRemoved(key: string | number): TreeNode[] {
+  const next = cloneWorking()
+  const hit = findNode(next, key)
+  if (hit) {
+    const idx = hit.siblings.indexOf(hit.node)
+    if (idx >= 0) hit.siblings.splice(idx, 1)
+  }
+  return next
+}
+
+function cancelEdit() {
+  const st = editing.value
+  if (!st) return
+  const { key: editKey, isNew: editIsNew } = st
+  editing.value = null
+  // 新建取消 → 把临时节点移除
+  if (editIsNew && editKey !== null) {
+    const next = cloneWorkingRemoved(editKey)
+    localTree.value = next
+    localDirty.value = true
+    emit('update:data', next)
+  }
+}
+
+async function removeTreeNode(node: TreeNode) {
+  if (!props.editable) return
+  closeMenu()
+  if (props.beforeDelete) {
+    const ok = await props.beforeDelete(node)
+    if (!ok) return
+  }
+  const next = cloneWorkingRemoved(node.value)
+  // 清理选中/展开/勾选残留
+  if (selectedNode.value?.value === node.value) selectedNode.value = null
+  const exp = new Set(internalExpanded.value)
+  exp.delete(node.value)
+  internalExpanded.value = exp
+  applyTree(next)
+  emit('remove', node, next)
+  emit('update:data', next)
+}
+
+// ---------- ㊳：右键菜单 ----------
+const menu = ref<TreeMenuState>({ visible: false, x: 0, y: 0, node: null })
+
+const DEFAULT_MENU_ACTIONS: TreeMenuAction[] = [
+  { key: 'add-child', label: '新增子节点', icon: '＋' },
+  { key: 'rename', label: '重命名', icon: '✏️' },
+  { key: 'remove', label: '删除', icon: '🗑️', divider: true },
+]
+
+const menuActions = computed<TreeMenuAction[]>(() => props.menuActions ?? DEFAULT_MENU_ACTIONS)
+
+function openMenu(node: TreeNode | null, e: MouseEvent) {
+  if (!props.contextMenu) return
+  e.preventDefault()
+  e.stopPropagation()
+  menu.value = { visible: true, x: e.clientX, y: e.clientY, node }
+}
+
+function closeMenu() {
+  if (menu.value.visible) menu.value = { ...menu.value, visible: false, node: null }
+}
+
+function onMenuAction(action: TreeMenuAction) {
+  if (action.disabled) return
+  const node = menu.value.node
+  closeMenu()
+  emit('menu-action', action, node)
+  // 内置行为（自定义 menuActions 时由父级自行处理）
+  if (props.menuActions) return
+  if (!node && action.key !== 'add-root') return
+  switch (action.key) {
+    case 'add-child':
+      if (node) startAddChild(node)
+      break
+    case 'add-root':
+      startAddRoot()
+      break
+    case 'rename':
+      if (node) startRename(node)
+      break
+    case 'remove':
+      if (node) void removeTreeNode(node)
+      break
+  }
+}
+
+// 每个组件实例独立维护监听状态（模块级共享会被多实例互相干扰）
+const ownListenersBound = ref(false)
+
+function onDocPointerDown(e: MouseEvent) {
+  if (!menu.value.visible) return
+  const target = e.target as HTMLElement | null
+  if (target?.closest('.ui-tree__menu')) return
+  closeMenu()
+}
+
+function onDocKeydown(e: KeyboardEvent) {
+  if (menu.value.visible && e.key === 'Escape') closeMenu()
+}
+
+function bindMenuListeners() {
+  if (ownListenersBound.value) return
+  ownListenersBound.value = true
+  document.addEventListener('mousedown', onDocPointerDown, true)
+  document.addEventListener('keydown', onDocKeydown, true)
+}
+
+function unbindMenuListeners() {
+  if (!ownListenersBound.value) return
+  ownListenersBound.value = false
+  document.removeEventListener('mousedown', onDocPointerDown, true)
+  document.removeEventListener('keydown', onDocKeydown, true)
+}
+
+// ⚠️ 坑：只有 watch 不 immediate → 初始 contextMenu=true 的组件不会绑监听
+if (props.contextMenu) bindMenuListeners()
+watch(
+  () => props.contextMenu,
+  (on) => (on ? bindMenuListeners() : unbindMenuListeners()),
+)
+onBeforeUnmount(unbindMenuListeners)
+
+provide<TreeEditContext>(TreeEditKey, {
+  editable: computed(() => !!props.editable),
+  editing,
+  startRename,
+  startAddChild,
+  startAddRoot,
+  commitEdit,
+  cancelEdit,
+  removeTreeNode,
+  menu,
+  openMenu,
+  closeMenu,
+  menuActions: computed(() => menuActions.value),
+  onMenuAction,
+  isEditingKey,
+})
+
 // ---------- provide ----------
 provide<TreeContext>(TreeKey, {
   expandedKeys: effectiveExpanded,
@@ -601,6 +900,7 @@ provide<TreeContext>(TreeKey, {
   clickToExpand: computed(() => !!props.clickToExpand),
   handleNodeClick,
   draggable: computed(() => !!props.draggable),
+  contextMenu: computed(() => !!props.contextMenu),
   draggingKey,
   dropTarget,
   onDragStart,
@@ -660,15 +960,38 @@ watch(() => props.checkStrictly, () => refreshIndeterminate())
     role="tree"
     :aria-multiselectable="checkable"
     @keydown="onTreeKeydown"
+    @contextmenu="contextMenu ? openMenu(null, $event) : undefined"
   >
     <UiTreeNode
-      v-for="node in data"
+      v-for="node in workingTree"
       :key="String(node.value)"
       :node="node"
       :depth="0"
       :visible="isFilterVisible(node)"
     />
-    <div v-if="!data.length" class="ui-tree__empty">暂无数据</div>
+    <div v-if="!workingTree.length" class="ui-tree__empty">暂无数据</div>
+
+    <!-- ㊳：右键菜单 -->
+    <Teleport to="body">
+      <div
+        v-if="contextMenu && menu.visible"
+        class="ui-tree__menu"
+        :style="{ left: menu.x + 'px', top: menu.y + 'px' }"
+        role="menu"
+      >
+        <div
+          v-for="action in menuActions"
+          :key="action.key"
+          class="ui-tree__menu-item"
+          :class="{ 'is-disabled': action.disabled, 'is-divider': action.divider }"
+          role="menuitem"
+          @click="onMenuAction(action)"
+        >
+          <span v-if="action.icon" class="ui-tree__menu-icon">{{ action.icon }}</span>
+          <span>{{ action.label }}</span>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -686,4 +1009,31 @@ watch(() => props.checkStrictly, () => refreshIndeterminate())
 }
 .ui-tree--line .ui-tree__children { margin-left: 9px; border-left: 1px solid var(--ui-border); }
 .ui-tree--dragging { cursor: grabbing; }
+
+/* ㊳：右键菜单 */
+.ui-tree__menu {
+  position: fixed;
+  z-index: 3000;
+  min-width: 148px;
+  padding: 4px;
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
+  font-size: 13px;
+}
+.ui-tree__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--ui-text-1);
+  white-space: nowrap;
+}
+.ui-tree__menu-item:hover { background: var(--ui-bg-soft); }
+.ui-tree__menu-item.is-disabled { opacity: .45; cursor: not-allowed; }
+.ui-tree__menu-item.is-divider { margin-top: 4px; border-top: 1px solid var(--ui-border); border-radius: 0 0 6px 6px; }
+.ui-tree__menu-icon { width: 14px; text-align: center; color: var(--ui-text-3); }
 </style>

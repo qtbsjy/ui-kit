@@ -53,6 +53,34 @@ async function loadChildren(node: TreeNode): Promise<TreeNode[]> {
 const keyword = ref('')
 const expanded = ref<(string | number)[]>(['hq'])
 const checked = ref<(string | number)[]>([])
+
+// ㊲ 键盘导航 / 拖拽排序演示树（可写）
+function cloneOrg(): TreeNode[] {
+  return JSON.parse(JSON.stringify(org)) as TreeNode[]
+}
+const kbTree = ref<TreeNode[]>(cloneOrg())
+const dragTree = ref<TreeNode[]>(cloneOrg())
+
+// ㊳ 节点编辑演示树（v-model:data 接住新树）
+const editTree = ref<TreeNode[]>(cloneOrg())
+const lastAction = ref('（还没操作）')
+const menuLog = ref<string[]>([])
+
+function onEditLog(msg: string) {
+  lastAction.value = msg
+  menuLog.value = [msg, ...menuLog.value].slice(0, 5)
+}
+function onMenuAction(action: { key: string; label: string }, node: TreeNode | null) {
+  onEditLog(`菜单「${action.label}」→ ${node ? node.label : '空白处'}`)
+}
+async function beforeDelete(node: TreeNode) {
+  // 演示：有子节点的删除需要确认
+  if (node.children?.length) {
+    onEditLog(`拦截删除「${node.label}」（有 ${node.children.length} 个子节点，演示拒绝）`)
+    return false
+  }
+  return true
+}
 </script>
 
 <template>
@@ -95,10 +123,63 @@ const checked = ref<(string | number)[]>([])
       <UiTree :data="org" :filter-text="keyword" default-expand-all />
     </div>
 
+    <h2>键盘导航 ⌨️</h2>
+    <div class="card">
+      <UiTree v-model:data="kbTree" keyboard-nav checkable default-expand-all />
+      <p class="hint">Tab 聚焦 → ↑↓ 移动 / ←→ 折叠展开 / Home End 首尾 / Enter 勾选 / Delete 删除</p>
+    </div>
+
+    <h2>拖拽排序 🖱️</h2>
+    <div class="card">
+      <UiTree
+        v-model:data="dragTree"
+        draggable
+        default-expand-all
+        @drop="(e) => onEditLog(`拖拽：${e.dragKey} → ${e.dropKey}（${e.position}）`)"
+      />
+      <p class="hint">拖到节点上下沿 = 同级插入；拖到中部 = 成为子节点</p>
+    </div>
+
+    <h2>节点编辑 ✏️ —— 双击重命名 / 右键增删</h2>
+    <div class="card">
+      <UiTree
+        v-model:data="editTree"
+        editable
+        context-menu
+        default-expand-all
+        :before-delete="beforeDelete"
+        @rename="(n, label) => onEditLog(`重命名：${n.value} → ${label}`)"
+        @add="(n, parentKey) => onEditLog(`新增：${n.label}（父：${parentKey ?? '根'}）`)"
+        @remove="(n) => onEditLog(`删除：${n.label}`)"
+      />
+      <p class="hint">双击节点文本 → 输入框（Enter 提交 / Esc 取消 / 失焦保存）；右键 → 新增子节点 / 重命名 / 删除</p>
+      <p class="hint">最近操作：{{ lastAction }}</p>
+      <p v-for="(m, i) in menuLog" :key="i" class="hint">· {{ m }}</p>
+    </div>
+
+    <h2>自定义右键菜单</h2>
+    <div class="card">
+      <UiTree
+        v-model:data="editTree"
+        context-menu
+        default-expand-all
+        :menu-actions="[
+          { key: 'copy', label: '复制节点' },
+          { key: 'duplicate', label: '复制一份到同级' },
+          { key: 'info', label: '查看信息', divider: true },
+        ]"
+        @menu-action="onMenuAction"
+      />
+      <p class="hint">menuActions 完全接管菜单，只 emit menu-action，业务自己处理</p>
+    </div>
+
     <div class="hint-block">
       💡 <b>递归渲染</b>：UiTreeNode 自引用 + provide/inject 共享树上下文（展开集 / 选中集 / 半选集 / 回调）。<br>
       💡 <b>选中联动</b>：勾选父 → 后代全选；取消祖先链；子部分勾选 → 父半选（indeterminate）；子全选 → 父自动选。<br>
       💡 <b>懒加载</b>：展开时调 load 变异 node.children，loading 态自动出现；isLeaf 可强制叶节点。<br>
+      💡 <b>键盘导航（㊲）</b>：整棵树共用一个 tabindex=0（roving），方向键移动焦点，跳过禁用节点。<br>
+      💡 <b>节点编辑（㊳）</b>：editable 双击进内联输入 → Enter 提交 / Esc 取消；新建节点先用临时 key 占位，Enter 后才 emit add。<br>
+      💡 <b>右键菜单（㊳）</b>：Teleport 到 body 定位，capture 阶段监听点击外部关闭；menuActions 可完全自定义。<br>
       💡 <b>过滤</b>：命中节点及其祖先强制展开显示，命中 label 高亮。
     </div>
   </div>

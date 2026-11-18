@@ -4,9 +4,12 @@
 //   1. 递归组件自身引用（defineOptions name）+ inject 共享树上下文
 //   2. 键盘导航：ref 注册 DOM 句柄到 ctx.nodeEls，由父级统一 roving tabindex 调度
 //   3. 拖拽：HTML5 draggable + dragover 时用 data-* 指示放置位置（before/after/inner）
-import { computed, inject, onBeforeUnmount, ref } from 'vue'
+//   4. ㊳：内联编辑输入框（双击重命名 / 新增时的输入）/ 右键菜单触发
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { NodeClickArea, TreeNode, TreeContext } from './treeContext'
 import { TreeKey } from './treeContext'
+import type { TreeEditContext } from './treeEditContext'
+import { TreeEditKey } from './treeEditContext'
 
 // 允许组件模板里递归引用自身（<UiTreeNode>）
 defineOptions({ name: 'UiTreeNode' })
@@ -18,6 +21,8 @@ const props = defineProps<{
 }>()
 
 const ctx = inject<TreeContext>(TreeKey)!
+// ㊳：编辑上下文可选（旧用法不 provide 也能跑）
+const edit = inject<TreeEditContext | null>(TreeEditKey, null)
 
 const hasChildren = computed(() => !!(props.node.children && props.node.children.length))
 const isLeaf = computed(() => {
@@ -68,10 +73,65 @@ function onArrowClick(e: MouseEvent) {
   ctx.handleNodeClick(props.node, 'arrow')
 }
 function onLabelClick() {
+  // 编辑中不响应点击（避免干扰输入）
+  if (isEditing.value) return
   ctx.handleNodeClick(props.node, 'label')
   if (props.node.disabled) return
   ctx.focusedKey.value = props.node.value
 }
+function onLabelDblClick(e: MouseEvent) {
+  if (!edit?.editable.value || props.node.disabled) return
+  e.stopPropagation()
+  edit.startRename(props.node)
+}
+function onContextMenu(e: MouseEvent) {
+  // ⚠️ 必须检查 contextMenu 开关：否则右键事件往上冒泡到 .ui-tree 的空白处理
+  if (!edit || !ctx.contextMenu.value) return
+  // 先选中当前节点再弹菜单（符合直觉）
+  ctx.focusedKey.value = props.node.value
+  edit.openMenu(props.node, e)
+}
+
+// ---------- ㊳：内联编辑输入框 ----------
+const editInputRef = ref<HTMLInputElement | null>(null)
+const isEditing = computed(() => !!edit && edit.isEditingKey(props.node.value))
+const draft = computed({
+  get: () => edit?.editing.value?.draft ?? '',
+  set: (v: string) => {
+    if (edit?.editing.value) edit.editing.value.draft = v
+  },
+})
+function onEditKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    e.stopPropagation()
+    edit?.commitEdit()
+  } else if (e.key === 'Escape') {
+    e.preventDefault()
+    e.stopPropagation()
+    edit?.cancelEdit()
+  }
+}
+function onEditBlur() {
+  // blur 提交（点击其他地方 → 保存）；但回车/ESC 已提交时 editing 已被置 null
+  if (!edit?.editing.value) return
+  nextTick(() => {
+    if (edit?.editing.value) edit.commitEdit()
+  })
+}
+// 编辑出现时自动聚焦
+watch(isEditing, async (on) => {
+  if (!on) return
+  await nextTick()
+  editInputRef.value?.focus()
+  editInputRef.value?.select()
+})
+onMounted(() => {
+  if (isEditing.value) {
+    nextTick(() => editInputRef.value?.focus())
+  }
+})
+
 function onCheck(e: Event) {
   const target = e.target as HTMLInputElement
   ctx.focusedKey.value = props.node.value
@@ -122,6 +182,8 @@ function onDragEnd() {
       :aria-disabled="isDisabled || undefined"
       :draggable="ctx.draggable.value && !isDisabled"
       @click="onLabelClick"
+      @dblclick="onLabelDblClick"
+      @contextmenu="onContextMenu"
       @dragstart="onDragStart"
       @dragover="onDragOver"
       @dragleave="onDragLeave"
@@ -144,12 +206,24 @@ function onDragEnd() {
         @click.stop
       >
       <span
+        v-if="!isEditing"
         class="ui-tree__label"
         :class="{ 'is-matched': isMatched, 'is-disabled': isDisabled }"
       >
         {{ node.label }}
         <span v-if="isLoading" class="ui-tree__loading">⏳</span>
       </span>
+      <input
+        v-else
+        ref="editInputRef"
+        v-model="draft"
+        class="ui-tree__edit-input"
+        :maxlength="50"
+        @keydown="onEditKeydown"
+        @blur="onEditBlur"
+        @click.stop
+        @dblclick.stop
+      >
     </div>
     <div v-if="isExpanded && canExpand" class="ui-tree__children" role="group">
       <UiTreeNode
@@ -238,6 +312,20 @@ function onDragEnd() {
 .ui-tree__label.is-matched { color: var(--ui-primary); font-weight: 600; }
 .ui-tree__label.is-disabled { color: var(--ui-text-3); }
 .ui-tree__loading { font-size: 12px; margin-left: 4px; }
+
+/* ㊳：内联编辑输入框 */
+.ui-tree__edit-input {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 6px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ui-text-1);
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-primary);
+  border-radius: 4px;
+  outline: none;
+}
 
 /* 子节点容器展开/折叠动画 */
 .ui-tree__children { overflow: hidden; }

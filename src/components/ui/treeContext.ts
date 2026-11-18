@@ -66,6 +66,8 @@ export interface TreeContext {
 
   /** 拖拽：是否启用 */
   draggable: Ref<boolean>
+  /** ㊳：是否启用右键菜单（子节点需要判断，避免冒泡到容器） */
+  contextMenu: Ref<boolean>
   /** 拖拽：当前被拖动的节点 key */
   draggingKey: Ref<string | number | null>
   /** 拖拽：当前悬停目标 { key, position } */
@@ -179,6 +181,47 @@ export function moveNode(
     const idx = t.siblings.indexOf(t.node)
     t.siblings.splice(position === 'before' ? idx : idx + 1, 0, moved)
   }
+  return next
+}
+
+// ---------- 作品㊳：编辑相关树工具 ----------
+
+/** 生成不冲突的临时 key（新建节点用，前缀 __new_） */
+export function makeTempKey(existing: Map<string | number, TreeNode>): string {
+  let i = 1
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const k = `__new_${i}__`
+    if (!existing.has(k)) return k
+    i++
+  }
+}
+
+/** 重命名节点（返回新树） */
+export function renameNode(tree: TreeNode[], key: string | number, label: string): TreeNode[] {
+  const next = cloneTree(tree)
+  const hit = findNode(next, key)
+  if (!hit) return tree
+  hit.node.label = label
+  return next
+}
+
+/** 在某父节点下插入子节点（parentKey=null 表示插入根级），position 缺省为末尾 */
+export function insertNode(
+  tree: TreeNode[],
+  parentKey: string | number | null,
+  node: TreeNode,
+  index?: number,
+): TreeNode[] {
+  const next = cloneTree(tree)
+  if (parentKey === null) {
+    const i = index === undefined ? next.length : Math.max(0, Math.min(next.length, index))
+    next.splice(i, 0, node)
+    return next
+  }
+  const hit = findNode(next, parentKey)
+  if (!hit) return tree
+  hit.node.children = hit.node.children ? [...hit.node.children, node] : [node]
   return next
 }
 
